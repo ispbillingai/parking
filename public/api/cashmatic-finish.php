@@ -9,14 +9,16 @@ use Parking\Payment\Confirmer;
 
 header('Content-Type: application/json');
 
-$client = new SessionClient($cfg['cashmatic']);
-$pin    = $client->pin();
-$amount = $client->amount();
+$body   = json_decode((string) file_get_contents('php://input'), true) ?: [];
+$pin    = preg_replace('/\D/', '', (string) ($body['pin'] ?? ''));
+$amount = (int) ($body['amount_cents'] ?? 0);
 
-if (!$pin || !$amount) {
-    echo json_encode(['ok' => false, 'error' => 'no active payment session']);
+if (strlen($pin) !== 6 || $amount <= 0) {
+    echo json_encode(['ok' => false, 'error' => 'missing pin or amount']);
     exit;
 }
+
+$client = new SessionClient($cfg['cashmatic']);
 
 $r = $client->lastTransaction();
 if (($r['code'] ?? -1) !== 0) {
@@ -31,7 +33,6 @@ $d   = $r['data'] ?? [];
 $end = $d['end'] ?? '?';
 
 if ($end !== 'normal') {
-    $client->clearTransaction();
     echo json_encode([
         'ok'    => false,
         'error' => "payment ended as '{$end}'",
@@ -44,7 +45,6 @@ $cmTxId      = isset($d['id']) ? (int) $d['id'] : null;
 $notDisp     = (int) ($d['notDispensed'] ?? 0);
 
 $res = (new Confirmer($cfg))->confirm($pin, $amount, $cmTxId);
-$client->clearTransaction();
 
 if (!$res['ok']) {
     echo json_encode([

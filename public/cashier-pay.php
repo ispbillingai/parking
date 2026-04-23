@@ -359,7 +359,10 @@ async function pollActive() {
     if (r.operation !== 'idle') return;
 
     clearInterval(pollHandle); pollHandle = null;
-    const finish = await post('api/cashmatic-finish.php');
+    const finish = await post('api/cashmatic-finish.php', {
+      pin: session.pin,
+      amount_cents: session.amount_cents,
+    });
     if (!finish.ok) {
       alert(CFG.i18n.payment_failed + (finish.error || finish.end || ''));
       show('s2');
