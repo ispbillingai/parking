@@ -1,0 +1,36 @@
+# Local secrets / environment
+config/config.php
+.env
+.env.*
+!.env.example
+
+# Composer
+/vendor/
+composer.phar
+
+# XAMPP / server artefacts
+*.log
+*.tmp
+*.bak
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude local state
+.claude/settings.local.json
+
+# Cashmatic vendor binaries, certs, default credentials and docs
+# (local-only reference material for integration — do not publish)
+/reference/
+
+# Build / cache
+/cache/
+/tmp/
+/storage/logs/

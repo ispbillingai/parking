@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct access to non-public folders
+    RewriteRule ^(vendor|src|config|db|bin)(/|$) - [F,L]
+
+    # Root of /parking/ -> public/index.php
+    RewriteRule ^$ public/index.php [L]
+
+    # Anything else that isn't an existing file or folder -> public/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Belt-and-braces: deny access if mod_rewrite is unavailable
+<FilesMatch "\.(sql|pdb|json|lock|md|sample\.php)$">
+    Require all denied
+</FilesMatch>
