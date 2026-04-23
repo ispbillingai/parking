@@ -1,5 +1,6 @@
 <?php
 // Copy this file to config/config.php and edit for your environment.
+// config/config.php is gitignored — never commit real secrets.
 
 return [
     'db' => [
@@ -10,51 +11,54 @@ return [
         'charset' => 'utf8mb4',
     ],
 
-    // Cashmatic local REST server, running on the cashier kiosk PC.
-    // The browser (on the kiosk) talks to it directly over HTTPS.
-    // Install the shipped server.pem as a trusted cert on the kiosk.
+    // Cashmatic local REST server. The VPS talks to it server-side (PHP),
+    // so base_url must be a hostname/IP the VPS can reach — typically via
+    // a Tailscale/VPN address, an ngrok tunnel, or a port-forward.
+    // The kiosk browser never calls this URL directly anymore.
     'cashmatic' => [
-        'base_url'   => 'https://127.0.0.1:50301',
+        'base_url'   => 'https://KIOSK_HOST_OR_TUNNEL:50301',
         'username'   => 'cashmatic',
-        'password'   => 'admin',
-        'verify_ssl' => false,
+        'password'   => 'CHANGE_ME',       // match the kiosk's users.json
+        'verify_ssl' => false,             // true once you trust the kiosk cert
     ],
 
     // MQTT broker that drives the gate relay and carries scan events.
     'mqtt' => [
-        'host'      => 'broker.example.com',
+        'host'      => '127.0.0.1',
         'port'      => 1883,
         'username'  => null,
         'password'  => null,
         'client_id' => 'parking-php',
         'use_tls'   => false,
         'topics' => [
-            'relay_open' => 'parking/gate/relay',   // publish here to open the gate
-            'scan'       => 'parking/gate/scan',    // gate QR reader publishes scanned PINs here
-            'pin_add'    => '',                     // optional: push paid PINs to gate-side cache
+            'relay_open' => 'parking/gate/relay',   // publish to open the gate
+            'scan'       => 'parking/gate/scan',    // gate reader publishes PINs here
+            'pin_add'    => '',                     // optional paid-PIN cache
         ],
         'relay_payload' => '1',
     ],
 
-    // Tariff. Amounts in euro cents.
+    // Tariff. Amounts in cents of the display currency.
     'tariff' => [
-        'grace_minutes'   => 10,
-        'hourly_cents'    => 150,
-        'daily_cap_cents' => 1500,
+        'currency'        => 'EUR',
+        'currency_symbol' => '€',
+        'grace_minutes'   => 0,
+        'minimum_cents'   => 100,   // €1.00 minimum
+        'hourly_cents'    => 100,   // €1.00/hour (partial hours round up)
+        'daily_cap_cents' => 0,     // 0 = no cap
     ],
 
-    // TextMeBot WhatsApp gateway.
+    // TextMeBot WhatsApp gateway (optional). Leave api_key empty to disable.
     'textmebot' => [
-        'api_key'  => 'YOUR_TEXTMEBOT_API_KEY',
+        'api_key'  => '',
         'endpoint' => 'https://api.textmebot.com/send.php',
     ],
 
     'app' => [
-        'base_url' => 'https://your-domain.example',
+        'base_url'                  => 'https://your-domain.example',
         'pin_ttl_after_pay_minutes' => 15,
-        // Default UI language for new visitors. Users can still switch via the
-        // IT/EN pills; their choice is remembered in the `parking_lang` cookie.
-        // Supported: 'en', 'it'.
+        'cashier_auto_reset_seconds' => 8,
+        // Default UI language (en|it). Users can switch; cookie remembers.
         'default_lang' => 'en',
     ],
 ];
