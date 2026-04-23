@@ -227,7 +227,7 @@ $browserCfg = [
 
 <script>
 const CFG = <?= json_encode($browserCfg, JSON_UNESCAPED_SLASHES) ?>;
-let session = null, pollHandle = null, autoResetHandle = null;
+let session = null, pollHandle = null, autoResetHandle = null, finishing = false;
 
 const $ = id => document.getElementById(id);
 const fmt = c => (c / 100).toFixed(2);
@@ -282,6 +282,7 @@ function renderAlreadyPaid(data) {
 function resetToStart() {
   if (autoResetHandle) { clearInterval(autoResetHandle); autoResetHandle = null; }
   if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+  finishing = false;
   session = null;
   $('pin').value = '';
   $('e1').textContent = '';
@@ -348,6 +349,7 @@ $('pay').onclick = async () => {
 };
 
 async function pollActive() {
+  if (finishing) return;
   try {
     const r = await post('api/cashmatic-poll.php');
     if (!r.ok) { $('opstatus').textContent = r.error || ''; return; }
@@ -357,8 +359,10 @@ async function pollActive() {
     $('nd').textContent   = fmt(r.notDispensed);
 
     if (r.operation !== 'idle') return;
-
+    if (finishing) return;
+    finishing = true;
     clearInterval(pollHandle); pollHandle = null;
+
     const finish = await post('api/cashmatic-finish.php', {
       pin: session.pin,
       amount_cents: session.amount_cents,
