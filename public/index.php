@@ -99,6 +99,14 @@ $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
         <span class="ico">&#x1F39F;</span>
         <span class="meta"><?= htmlspecialchars(I18n::t('tile_entrance_title')) ?><small><?= htmlspecialchars(I18n::t('tile_entrance_sub')) ?></small></span>
       </a>
+      <a class="tile" href="totem.php">
+        <span class="ico">&#x1F5A8;</span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_totem_title')) ?><small><?= htmlspecialchars(I18n::t('tile_totem_sub')) ?></small></span>
+      </a>
+      <a class="tile" href="subscriber-entry.php">
+        <span class="ico">&#x1F511;</span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_subentry_title')) ?><small><?= htmlspecialchars(I18n::t('tile_subentry_sub')) ?></small></span>
+      </a>
       <a class="tile" href="cashier-pay.php">
         <span class="ico">&#x1F4B6;</span>
         <span class="meta"><?= htmlspecialchars(I18n::t('tile_cashier_title')) ?><small><?= htmlspecialchars(I18n::t('tile_cashier_sub')) ?></small></span>
@@ -106,6 +114,10 @@ $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
       <a class="tile" href="pay.php">
         <span class="ico">&#x1F4B3;</span>
         <span class="meta"><?= htmlspecialchars(I18n::t('tile_pay_title')) ?><small><?= htmlspecialchars(I18n::t('tile_pay_sub')) ?></small></span>
+      </a>
+      <a class="tile" href="admin/index.php">
+        <span class="ico">&#x1F4CA;</span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_admin_title')) ?><small><?= htmlspecialchars(I18n::t('tile_admin_sub')) ?></small></span>
       </a>
     </div>
     <footer>&copy; <?= date('Y') ?> <?= htmlspecialchars(I18n::t('footer')) ?></footer>

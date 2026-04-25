@@ -32,14 +32,16 @@ class Db
         ?int $sessionId,
         ?string $pin,
         string $eventType,
-        array $details = []
+        array $details = [],
+        ?int $subscriptionId = null
     ): void {
         $stmt = $pdo->prepare(
-            'INSERT INTO gate_events (session_id, pin, event_type, details)
-             VALUES (?, ?, ?, ?)'
+            'INSERT INTO gate_events (session_id, subscription_id, pin, event_type, details)
+             VALUES (?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $sessionId,
+            $subscriptionId,
             $pin,
             $eventType,
             $details ? json_encode($details, JSON_UNESCAPED_UNICODE) : null,

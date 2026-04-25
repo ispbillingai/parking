@@ -54,11 +54,42 @@ return [
         'endpoint' => 'https://api.textmebot.com/send.php',
     ],
 
+    // Email delivery for the totem (and future admin notifications).
+    // transport=mail uses PHP mail() (works on XAMPP if sendmail is configured).
+    // transport=smtp uses raw socket SMTP (no PHPMailer dependency).
+    'mailer' => [
+        'transport'    => 'mail',          // 'mail' | 'smtp'
+        'from_email'   => 'no-reply@your-domain.example',
+        'from_name'    => 'Parking',
+        // smtp_* only used when transport='smtp'
+        'smtp_host'    => 'smtp.example.com',
+        'smtp_port'    => 587,
+        'smtp_secure'  => 'tls',           // ''|'tls' (STARTTLS)|'ssl' (implicit)
+        'smtp_user'    => '',
+        'smtp_pass'    => '',
+        'smtp_timeout' => 15,
+    ],
+
+    // Admin dashboard.
+    // The first time admin_users is empty, this account is auto-provisioned.
+    // Sign in once, then change/remove the bootstrap before going to production.
+    'admin' => [
+        'bootstrap' => [
+            'username'  => 'admin',
+            'password'  => 'admin',           // CHANGE_ME after first login
+            'full_name' => 'Administrator',
+        ],
+    ],
+
     'app' => [
         'base_url'                  => 'https://your-domain.example',
         'pin_ttl_after_pay_minutes' => 15,
         'cashier_auto_reset_seconds' => 8,
         // Default UI language (en|it). Users can switch; cookie remembers.
         'default_lang' => 'en',
+        // If 1, subscriber-entry refuses an electronic key when the related
+        // subscription has any unpaid installment whose due date has passed.
+        // If 0, the gate opens but the overdue is shown in the admin panel.
+        'subscription_block_overdue' => 1,
     ],
 ];
