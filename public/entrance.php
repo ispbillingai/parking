@@ -4,15 +4,19 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 $cfg = require __DIR__ . '/../config/config.php';
 
+use Parking\Admin\Settings;
 use Parking\Db;
 use Parking\I18n;
 use Parking\Notify\TextMeBot;
+use Parking\Notify\Template;
 use Parking\Pin\Generator;
+
+$pdo = Db::pdo($cfg['db']);
+$cfg = Settings::overlay($cfg, $pdo);
 
 $lang = I18n::init($cfg['app']['default_lang'] ?? null);
 $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
 
-$pdo = Db::pdo($cfg['db']);
 $now = new DateTimeImmutable();
 
 $phoneRaw = (string) ($_REQUEST['phone'] ?? '');
@@ -35,18 +39,25 @@ $plate  = '—';
 
 $waSent = false;
 if ($phone && !empty($cfg['textmebot']['api_key'])) {
-    $msg = I18n::t('entrance_title') . "\n"
-         . I18n::t('entrance_entry') . ' ' . $now->format('d/m/Y H:i') . "\n"
-         . I18n::t('entrance_pin') . ": $pin\n" . $qrUrl;
-    $res = (new TextMeBot($cfg['textmebot']))->sendWhatsapp($phone, $msg);
-    $waSent = (bool) $res['ok'];
-    Db::logEvent(
-        $pdo,
-        $sessionId,
-        $pin,
-        $waSent ? 'whatsapp_sent' : 'whatsapp_fail',
-        ['phone' => $phone, 'http' => $res['http'] ?? null]
-    );
+    $tpl = Template::render($pdo, 'whatsapp', 'entrance_ticket', [
+        'brand'         => I18n::t('entrance_title'),
+        'entry_time'    => $now->format('d/m/Y H:i'),
+        'pin'           => $pin,
+        'qr_url'        => $qrUrl,
+        'phone'         => $phone,
+        'customer_name' => '',
+    ]);
+    if ($tpl['enabled']) {
+        $res = (new TextMeBot($cfg['textmebot']))->sendWhatsapp($phone, $tpl['body']);
+        $waSent = (bool) $res['ok'];
+        Db::logEvent(
+            $pdo,
+            $sessionId,
+            $pin,
+            $waSent ? 'whatsapp_sent' : 'whatsapp_fail',
+            ['phone' => $phone, 'http' => $res['http'] ?? null]
+        );
+    }
 }
 
 if (($_GET['format'] ?? '') === 'json') {

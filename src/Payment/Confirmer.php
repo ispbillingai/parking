@@ -6,6 +6,7 @@ namespace Parking\Payment;
 use PDO;
 use Parking\Db;
 use Parking\Gate\MqttPublisher;
+use Parking\Notify\Template;
 use Parking\Notify\TextMeBot;
 
 class Confirmer
@@ -49,15 +50,24 @@ class Confirmer
 
         if (!empty($s['customer_phone']) && !empty($this->cfg['textmebot']['api_key'])) {
             $ttl = (int) ($this->cfg['app']['pin_ttl_after_pay_minutes'] ?? 15);
-            $msg = "Parcheggio pagato.\nPIN uscita: $pin\nValido per {$ttl} minuti. Scansiona il QR al cancello.";
-            $res = (new TextMeBot($this->cfg['textmebot']))->sendWhatsapp($s['customer_phone'], $msg);
-            Db::logEvent(
-                $pdo,
-                (int) $s['id'],
-                $pin,
-                $res['ok'] ? 'whatsapp_sent' : 'whatsapp_fail',
-                ['phone' => $s['customer_phone'], 'http' => $res['http'] ?? null]
-            );
+            $tpl = Template::render($pdo, 'whatsapp', 'payment_paid', [
+                'brand'         => 'Parking',
+                'pin'           => $pin,
+                'ttl_minutes'   => $ttl,
+                'amount'        => number_format($amountCents / 100, 2, '.', ''),
+                'customer_name' => '',
+                'phone'         => (string) $s['customer_phone'],
+            ]);
+            if ($tpl['enabled']) {
+                $res = (new TextMeBot($this->cfg['textmebot']))->sendWhatsapp($s['customer_phone'], $tpl['body']);
+                Db::logEvent(
+                    $pdo,
+                    (int) $s['id'],
+                    $pin,
+                    $res['ok'] ? 'whatsapp_sent' : 'whatsapp_fail',
+                    ['phone' => $s['customer_phone'], 'http' => $res['http'] ?? null]
+                );
+            }
         }
 
         try {

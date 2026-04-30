@@ -8,7 +8,9 @@ use Parking\Db;
 
 /**
  * Sends the entry-ticket notification (PIN + QR + entry time) over the
- * channel(s) the visitor selected at the totem. Logs each attempt to
+ * channel(s) the visitor selected at the totem. Bodies are pulled from
+ * the notification_templates table (admin-editable), so the wording
+ * here is just placeholder substitution. Logs each attempt to
  * gate_events so the admin dashboard reflects what was sent.
  */
 class Dispatcher
@@ -23,49 +25,48 @@ class Dispatcher
         ?string $phone,
         ?string $email,
         string $qrUrl,
-        array $i18n
+        array $i18n,
+        ?string $customerName = null
     ): array {
         $brand = $i18n['brand'] ?? 'Parking';
-        $pinLabel = $i18n['pin_label'] ?? 'PIN';
-        $entryLabel = $i18n['entry_label'] ?? 'Entry';
-        $intro = $i18n['intro'] ?? 'Your parking ticket';
 
-        $text = $brand . "\n"
-              . $intro . "\n"
-              . $entryLabel . ': ' . $enteredAtHuman . "\n"
-              . $pinLabel . ': ' . $pin . "\n"
-              . $qrUrl;
-
-        $html = '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:auto;padding:24px;background:#0b1020;color:#e7ecf5;border-radius:14px">'
-              . '<h2 style="margin:0 0 8px">' . htmlspecialchars($brand) . '</h2>'
-              . '<p style="color:#9aa4bf;margin:0 0 18px">' . htmlspecialchars($intro) . '</p>'
-              . '<p style="margin:0 0 6px"><strong>' . htmlspecialchars($entryLabel) . ':</strong> ' . htmlspecialchars($enteredAtHuman) . '</p>'
-              . '<p style="margin:0 0 16px"><strong>' . htmlspecialchars($pinLabel) . ':</strong> '
-              . '<span style="display:inline-block;font-size:28px;letter-spacing:8px;background:#fff;color:#0b1020;padding:6px 14px;border-radius:8px;font-weight:800">' . htmlspecialchars($pin) . '</span></p>'
-              . '<p><img alt="QR" src="' . htmlspecialchars($qrUrl) . '" width="220" height="220" style="background:#fff;padding:8px;border-radius:8px"></p>'
-              . '</div>';
+        $vars = [
+            'brand'         => $brand,
+            'entry_time'    => $enteredAtHuman,
+            'pin'           => $pin,
+            'qr_url'        => $qrUrl,
+            'phone'         => (string) ($phone ?? ''),
+            'email'         => (string) ($email ?? ''),
+            'customer_name' => (string) ($customerName ?? ''),
+        ];
 
         $waOk = null; $emailOk = null;
 
         if ($phone && !empty($this->cfg['textmebot']['api_key'])) {
-            $res = (new TextMeBot($this->cfg['textmebot']))->sendWhatsapp($phone, $text);
-            $waOk = (bool) $res['ok'];
-            Db::logEvent(
-                $pdo, $sessionId, $pin,
-                $waOk ? 'whatsapp_sent' : 'whatsapp_fail',
-                ['phone' => $phone, 'http' => $res['http'] ?? null]
-            );
+            $tpl = Template::render($pdo, 'whatsapp', 'entrance_ticket', $vars);
+            if ($tpl['enabled']) {
+                $res = (new TextMeBot($this->cfg['textmebot']))->sendWhatsapp($phone, $tpl['body']);
+                $waOk = (bool) $res['ok'];
+                Db::logEvent(
+                    $pdo, $sessionId, $pin,
+                    $waOk ? 'whatsapp_sent' : 'whatsapp_fail',
+                    ['phone' => $phone, 'http' => $res['http'] ?? null]
+                );
+            }
         }
 
         if ($email && Mailer::isValid($email)) {
-            $subject = $brand . ' — ' . $intro;
-            $res = (new Mailer($this->cfg['mailer'] ?? []))->send($email, $subject, $html, $text);
-            $emailOk = (bool) $res['ok'];
-            Db::logEvent(
-                $pdo, $sessionId, $pin,
-                $emailOk ? 'email_sent' : 'email_fail',
-                ['email' => $email, 'transport' => $res['transport'] ?? null, 'error' => $res['error'] ?? null]
-            );
+            $tpl = Template::render($pdo, 'email', 'entrance_ticket', $vars);
+            if ($tpl['enabled']) {
+                $subject = $tpl['subject'] ?? ($brand . ' — Your parking ticket');
+                $res = (new Mailer($this->cfg['mailer'] ?? []))->send($email, $subject, $tpl['body']);
+                $emailOk = (bool) $res['ok'];
+                Db::logEvent(
+                    $pdo, $sessionId, $pin,
+                    $emailOk ? 'email_sent' : 'email_fail',
+                    ['email' => $email, 'transport' => $res['transport'] ?? null, 'error' => $res['error'] ?? null]
+                );
+            }
         }
 
         return ['whatsapp' => $waOk, 'email' => $emailOk];

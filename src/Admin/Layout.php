@@ -20,6 +20,8 @@ final class Layout
         'subscriptions' => ['subscriptions.php', 'nav_subscriptions', '&#x1F511;'],
         'plans'         => ['plans.php',         'nav_plans',         '&#x1F3F7;'],
         'payments'      => ['payments.php',      'nav_payments',      '&#x1F4B6;'],
+        'notifications' => ['notifications.php', 'nav_notifications', '&#x1F4E8;'],
+        'settings'      => ['settings.php',      'nav_settings',      '&#x2699;&#xFE0F;'],
     ];
 
     public static function begin(string $title, string $active = 'dashboard'): void

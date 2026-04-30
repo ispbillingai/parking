@@ -4,8 +4,12 @@ declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 $cfg = require __DIR__ . '/../../config/config.php';
 
+use Parking\Admin\Settings;
 use Parking\Cashmatic\SessionClient;
+use Parking\Db;
 use Parking\Payment\Confirmer;
+
+$cfg = Settings::overlay($cfg, Db::pdo($cfg['db']));
 
 header('Content-Type: application/json');
 

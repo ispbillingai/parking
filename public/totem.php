@@ -4,15 +4,17 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 $cfg = require __DIR__ . '/../config/config.php';
 
+use Parking\Admin\Settings;
 use Parking\Db;
 use Parking\I18n;
 use Parking\Notify\Dispatcher;
 use Parking\Notify\Mailer;
 use Parking\Pin\Generator;
 
+$pdo  = Db::pdo($cfg['db']);
+$cfg  = Settings::overlay($cfg, $pdo);
 $lang = I18n::init($cfg['app']['default_lang'] ?? null);
 $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
-$pdo  = Db::pdo($cfg['db']);
 
 $result = null; $error = null;
 
@@ -91,12 +93,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $pdo, $sessionId, $pin,
                 $now->format('d/m/Y H:i'),
                 $sendPhone, $sendEmail, $qrUrl,
-                [
-                    'brand'       => I18n::t('entrance_title'),
-                    'pin_label'   => I18n::t('entrance_pin'),
-                    'entry_label' => I18n::t('entrance_entry_time'),
-                    'intro'       => I18n::t('totem_email_intro'),
-                ]
+                ['brand' => I18n::t('entrance_title')],
+                $name !== '' ? $name : null
             );
         }
 

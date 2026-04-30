@@ -166,5 +166,54 @@ $pdo->exec(
 ) NOT NULL");
 step('   widened event_type ENUM');
 
+step('-- creating settings + notification_templates');
+
+$pdo->exec(
+"CREATE TABLE IF NOT EXISTS settings (
+    name VARCHAR(80) NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$pdo->exec(
+"CREATE TABLE IF NOT EXISTS notification_templates (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    channel ENUM('whatsapp','email') NOT NULL,
+    event_key VARCHAR(60) NOT NULL,
+    subject VARCHAR(200) NULL,
+    body TEXT NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_channel_event (channel, event_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// Seed default templates only when each (channel,event_key) pair is missing,
+// so re-running migrate doesn't clobber the admin's edits.
+$defaults = [
+    [
+        'channel' => 'whatsapp', 'event_key' => 'entrance_ticket', 'subject' => null,
+        'body' => "{brand}\nIngresso: {entry_time}\nPIN: {pin}\n{qr_url}",
+    ],
+    [
+        'channel' => 'whatsapp', 'event_key' => 'payment_paid', 'subject' => null,
+        'body' => "Parcheggio pagato.\nPIN uscita: {pin}\nValido per {ttl_minutes} minuti. Scansiona il QR al cancello.",
+    ],
+    [
+        'channel' => 'email', 'event_key' => 'entrance_ticket',
+        'subject' => '{brand} — Your parking ticket',
+        'body' => '<p>Hello {customer_name},</p><p>Your parking ticket:</p><p><strong>PIN: {pin}</strong><br>Entered at: {entry_time}</p><p><img src="{qr_url}" alt="QR code" width="220"></p>',
+    ],
+];
+$check  = $pdo->prepare('SELECT id FROM notification_templates WHERE channel=? AND event_key=?');
+$insert = $pdo->prepare('INSERT INTO notification_templates (channel, event_key, subject, body) VALUES (?,?,?,?)');
+foreach ($defaults as $d) {
+    $check->execute([$d['channel'], $d['event_key']]);
+    if (!$check->fetchColumn()) {
+        $insert->execute([$d['channel'], $d['event_key'], $d['subject'], $d['body']]);
+        step('   seeded ' . $d['channel'] . '/' . $d['event_key']);
+    }
+}
+
 step("\nDONE. tables now:");
 foreach ($pdo->query("SHOW TABLES") as $r) echo "  - " . $r[0] . "\n";

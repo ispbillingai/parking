@@ -75,6 +75,30 @@ CREATE TABLE IF NOT EXISTS subscription_payments (
     CONSTRAINT fk_subpay_sub FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Runtime settings overrides (dot-notation keys: textmebot.api_key,
+-- mailer.smtp_host, tariff.hourly_cents, app.default_lang, etc.).
+-- Read at request start to overlay config/config.php defaults so admins
+-- can change WhatsApp/Email/Tariff/App settings without editing PHP files.
+CREATE TABLE IF NOT EXISTS settings (
+    name VARCHAR(80) NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Editable WhatsApp / Email message templates with placeholder substitution
+-- (e.g. {pin}, {entry_time}, {customer_name}). One row per channel+event.
+CREATE TABLE IF NOT EXISTS notification_templates (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    channel ENUM('whatsapp','email') NOT NULL,
+    event_key VARCHAR(60) NOT NULL,
+    subject VARCHAR(200) NULL,
+    body TEXT NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_channel_event (channel, event_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Admin / operator users for the dashboard
 CREATE TABLE IF NOT EXISTS admin_users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
