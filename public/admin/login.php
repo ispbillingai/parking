@@ -60,6 +60,13 @@ button{
 }
 .err{background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.35);color:#fecaca;padding:10px 12px;border-radius:10px;font-size:13px;margin-top:12px}
 .tip{color:var(--muted);font-size:12px;margin-top:12px;text-align:center}
+@media (max-width:480px){
+  body{padding:14px}
+  .box{padding:22px 18px;border-radius:16px}
+  h1{font-size:20px}
+  input{font-size:14px;padding:11px 12px}
+  button{font-size:14px;padding:11px}
+}
 </style>
 </head>
 <body>

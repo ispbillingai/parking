@@ -28,12 +28,14 @@ final class Layout
         $lang = I18n::current();
         echo '<!doctype html><html lang="' . htmlspecialchars($lang) . '"><head>'
             . '<meta charset="utf-8">'
-            . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
             . '<title>' . htmlspecialchars($title) . ' · ' . htmlspecialchars(I18n::t('admin_brand')) . '</title>'
             . self::css()
             . '</head><body>';
 
-        echo '<aside class="side">'
+        echo '<div class="side-overlay" id="sideOverlay" onclick="document.body.classList.remove(\'nav-open\')"></div>';
+
+        echo '<aside class="side" id="side">'
             . '<a href="index.php" class="logo"><span class="dot"></span> ' . htmlspecialchars(I18n::t('admin_brand')) . '</a>'
             . '<nav>';
         foreach (self::NAV as $key => [$href, $tk, $ico]) {
@@ -52,6 +54,7 @@ final class Layout
 
         echo '<main class="main">'
             . '<header class="topbar">'
+            . '<button type="button" class="menu-btn" aria-label="Menu" onclick="document.body.classList.toggle(\'nav-open\')">&#x2630;</button>'
             . '<h1>' . htmlspecialchars($title) . '</h1>'
             . '<div class="actions">'
             . '<a class="btn ghost" href="../index.php" target="_blank" rel="noopener">' . htmlspecialchars(I18n::t('nav_kiosk')) . ' &#x2197;</a>'
@@ -203,6 +206,66 @@ form.crud textarea{min-height:90px;font-family:inherit}
 .row-actions .btn{padding:5px 10px;font-size:12px}
 code.k{background:rgba(0,0,0,.3);padding:2px 8px;border-radius:6px;font-family:Menlo,Consolas,monospace;font-size:13px;letter-spacing:.06em}
 .muted{color:var(--muted)}
+
+/* --- Mobile drawer + hamburger --- */
+.menu-btn{
+  display:none;align-items:center;justify-content:center;
+  width:42px;height:42px;border-radius:10px;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);
+  color:var(--text);cursor:pointer;font-size:20px;line-height:1;flex:0 0 auto;
+}
+.menu-btn:hover{background:rgba(255,255,255,.1)}
+.side-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:40;backdrop-filter:blur(2px);
+}
+body.nav-open .side-overlay{display:block}
+
+@media (max-width:900px){
+  body{display:block}
+  .side{
+    position:fixed;top:0;left:0;height:100vh;width:280px;flex:none;
+    transform:translateX(-100%);transition:transform .25s ease;z-index:50;
+    box-shadow:6px 0 30px rgba(0,0,0,.55);
+  }
+  body.nav-open .side{transform:translateX(0)}
+  .main{width:100%}
+  .menu-btn{display:inline-flex}
+  .topbar{
+    padding:12px 14px;gap:10px;flex-wrap:wrap;
+  }
+  .topbar h1{font-size:18px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar .actions{order:3;width:100%;justify-content:flex-end}
+  .content{padding:14px}
+  .card{padding:14px;border-radius:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.t{min-width:560px}
+  table.t th,table.t td{padding:8px 10px;font-size:13px}
+  form.crud{grid-template-columns:1fr;gap:12px}
+  form.filters{gap:8px}
+  form.filters input,form.filters select{min-width:140px;width:100%}
+  form.filters label{flex:1 1 140px}
+  form.filters .btn{flex:1 1 auto}
+  .stat{padding:12px}
+  .stat .val{font-size:22px}
+  .row-actions{flex-direction:column;align-items:stretch;gap:6px}
+  .row-actions form{display:block}
+  .row-actions .btn{width:100%;text-align:center}
+  .pager{flex-direction:column;gap:10px;align-items:stretch;text-align:center}
+  .flash{font-size:13px}
+  .btn{padding:10px 14px}
+  /* Login is independent (not via Layout) but we still inherit some nav clicks */
+}
+
+@media (max-width:480px){
+  .topbar h1{font-size:16px}
+  .stat .val{font-size:20px}
+  .stat .lbl{font-size:11px}
+  .lang{padding:2px}
+  .lang a{padding:4px 8px;font-size:11px}
+  table.t{min-width:520px;font-size:12px}
+  table.t th,table.t td{padding:7px 8px}
+  .content{padding:12px 10px}
+}
 </style>';
     }
 }

@@ -82,6 +82,20 @@ $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
   .lang-switch a.active{
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b1020;
   }
+  @media (max-width:760px){
+    body{padding:18px 14px;align-items:flex-start;padding-top:64px}
+    h1{font-size:38px;margin-top:14px}
+    p.sub{font-size:14px;margin-bottom:20px}
+    a.tile{padding:18px 16px;font-size:18px;gap:12px}
+    a.tile .ico{width:42px;height:42px;flex:0 0 42px;font-size:20px}
+    .lang-switch{top:12px;right:12px;padding:3px}
+    .lang-switch a{padding:5px 10px;font-size:11px}
+  }
+  @media (max-width:420px){
+    h1{font-size:32px}
+    a.tile{padding:14px 14px;font-size:16px}
+    a.tile .meta small{font-size:12px}
+  }
 </style>
 </head>
 <body>

@@ -160,6 +160,27 @@ $browserCfg = [
   .lang-switch a:hover{color:var(--text)}
   .lang-switch a.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b1020}
   .header-right{display:flex;align-items:center;gap:10px}
+  @media (max-width:760px){
+    body{padding:14px}
+    .header{flex-wrap:wrap;gap:10px;margin-bottom:14px}
+    h1{font-size:22px}
+    .screen{padding:18px;border-radius:16px;margin-bottom:14px}
+    input[type=text]{font-size:30px;letter-spacing:8px;padding:14px 8px}
+    button{font-size:15px;padding:12px 16px}
+    .actions{gap:8px}
+    .amount{font-size:48px}
+    .amount .cur{font-size:22px}
+    .success-icon,.fail-icon{width:60px;height:60px;font-size:32px}
+    .receipt{max-width:100%}
+    .row{font-size:14px;padding:10px 0}
+    .header-right{flex-wrap:wrap;gap:8px}
+  }
+  @media (max-width:420px){
+    input[type=text]{font-size:24px;letter-spacing:5px}
+    .amount{font-size:38px}
+    h1{font-size:20px}
+    .actions button{flex:1 1 auto}
+  }
 </style>
 </head>
 <body>

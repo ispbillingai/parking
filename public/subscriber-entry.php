@@ -126,6 +126,21 @@ button{
 .lang-switch{position:fixed;top:18px;right:18px;display:flex;gap:4px;padding:4px;border:1px solid var(--border);border-radius:999px;background:var(--card);backdrop-filter:blur(8px)}
 .lang-switch a{display:inline-block;padding:6px 12px;border-radius:999px;color:var(--muted);font-size:12px;font-weight:700;text-decoration:none}
 .lang-switch a.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b1020}
+@media (max-width:760px){
+  body{padding:14px;align-items:flex-start;padding-top:64px}
+  .box{padding:22px 18px;border-radius:18px}
+  h1{font-size:22px}
+  input{font-size:24px;letter-spacing:5px;padding:14px 10px}
+  button{font-size:15px;padding:13px}
+  .icon-circle{width:78px;height:78px;font-size:42px}
+  .detail{font-size:13px}
+  .lang-switch{top:10px;right:10px;padding:3px}
+  .lang-switch a{padding:5px 10px;font-size:11px}
+}
+@media (max-width:420px){
+  input{font-size:20px;letter-spacing:4px}
+  h1{font-size:20px}
+}
 </style>
 </head>
 <body>

@@ -174,6 +174,26 @@ button.go{
 .actions{display:flex;gap:10px;justify-content:center;margin-top:18px}
 .btn{padding:10px 18px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-weight:600;text-decoration:none;cursor:pointer}
 .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b1020;border:none}
+@media (max-width:760px){
+  body{padding:14px;align-items:flex-start;padding-top:64px}
+  .box{padding:22px 18px;border-radius:18px}
+  h1{font-size:24px;margin-top:10px}
+  p.sub{font-size:13px}
+  .row{grid-template-columns:1fr;gap:6px}
+  .choices{grid-template-columns:repeat(3,1fr);gap:6px}
+  .choice{padding:10px 4px;font-size:11px}
+  .choice .ico{font-size:18px}
+  input{font-size:15px;padding:11px 12px}
+  button.go{font-size:15px;padding:13px}
+  .pin{font-size:38px;letter-spacing:8px}
+  .qr-wrap img{width:170px;height:170px}
+  .lang-switch{top:10px;right:10px;padding:3px}
+  .lang-switch a{padding:5px 10px;font-size:11px}
+}
+@media (max-width:420px){
+  .pin{font-size:32px;letter-spacing:6px}
+  h1{font-size:22px}
+}
 </style>
 </head>
 <body>

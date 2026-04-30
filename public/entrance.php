@@ -167,6 +167,21 @@ if (($_GET['format'] ?? '') === 'json') {
   .lang-switch a.active{
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b1020;
   }
+  @media (max-width:760px){
+    body{padding:14px}
+    .ticket{padding:24px 20px 20px;border-radius:18px}
+    h1{font-size:24px}
+    .pin{font-size:38px;letter-spacing:8px}
+    .qr-wrap img{width:200px;height:200px}
+    .lang-switch{top:10px;right:10px;padding:3px}
+    .lang-switch a{padding:5px 10px;font-size:11px}
+    .row .v{font-size:14px}
+  }
+  @media (max-width:420px){
+    .pin{font-size:32px;letter-spacing:6px}
+    .qr-wrap img{width:170px;height:170px}
+    h1{font-size:22px}
+  }
   @media print{
     @page{size:80mm auto;margin:6mm}
     body{background:#fff;color:#000;display:block;padding:0}
