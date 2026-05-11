@@ -8,6 +8,7 @@ use Parking\Admin\Settings;
 use Parking\Cashmatic\SessionClient;
 use Parking\Db;
 use Parking\Fiscal\Client as FiscalClient;
+use Parking\Fiscal\Log as FiscalLog;
 use Parking\Subscription\DailyTicket;
 
 $pdo = Db::pdo($cfg['db']);
@@ -54,7 +55,26 @@ if (!$result['ok']) {
 // the subscription — the customer has paid and is entitled to the pass.
 $receipt = null;
 $fiscal  = new FiscalClient($cfg['fiscal_printer'] ?? []);
-if ($fiscal->enabled()) {
+
+FiscalLog::info('fiscal_attempt', [
+    'endpoint'        => 'daily-ticket-finish',
+    'method'          => 'cash',
+    'pin'             => $pin,
+    'plan_id'         => $planId,
+    'plan_name'       => $planName,
+    'amount_cents'    => $amount,
+    'subscription_id' => $result['subscription_id'] ?? null,
+    'enabled'         => $fiscal->enabled(),
+]);
+
+if (!$fiscal->enabled()) {
+    FiscalLog::warn('fiscal_skipped_not_enabled', [
+        'endpoint'        => 'daily-ticket-finish',
+        'pin'             => $pin,
+        'subscription_id' => $result['subscription_id'] ?? null,
+        'amount_cents'    => $amount,
+    ]);
+} else {
     $unitPrice = number_format($amount / 100, 2, '.', '');
     $emit = $fiscal->emit(
         [['description' => substr($planName, 0, 38), 'quantity' => '1', 'unitPrice' => $unitPrice, 'department' => 1]],
@@ -63,8 +83,26 @@ if ($fiscal->enabled()) {
     );
     if ($emit['ok']) {
         $receipt = $emit;
+        FiscalLog::info('fiscal_result', [
+            'endpoint'        => 'daily-ticket-finish',
+            'pin'             => $pin,
+            'subscription_id' => $result['subscription_id'] ?? null,
+            'ok'              => true,
+            'receipt_number'  => $emit['receipt_number'] ?? '',
+            'receipt_date'    => $emit['receipt_date']   ?? '',
+            'z_rep_number'    => $emit['z_rep_number']   ?? '',
+        ]);
     } else {
-        error_log('fiscal receipt emit failed (daily-ticket cash): ' . ($emit['error'] ?? '?'));
+        FiscalLog::error('fiscal_result', [
+            'endpoint'        => 'daily-ticket-finish',
+            'stage'           => 'emit',
+            'pin'             => $pin,
+            'subscription_id' => $result['subscription_id'] ?? null,
+            'amount_cents'    => $amount,
+            'method'          => 'cash',
+            'error'           => $emit['error'] ?? '?',
+            'note'            => 'cash collected + subscription issued but receipt NOT emitted — issue manual receipt before next Z-report',
+        ]);
         Db::logEvent($pdo, null, $pin, 'payment_fail', [
             'stage' => 'fiscal_receipt',
             'error' => $emit['error'] ?? '?',

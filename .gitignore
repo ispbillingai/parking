@@ -33,4 +33,7 @@ desktop.ini
 # Build / cache
 /cache/
 /tmp/
-/storage/logs/
+
+# Runtime logs — keep the directory (storage/logs/.gitkeep), drop the files.
+# The "*.log" rule above already excludes the log files themselves.
+!/storage/logs/

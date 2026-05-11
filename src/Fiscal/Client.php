@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Parking\Fiscal;
 
-use RuntimeException;
 use SimpleXMLElement;
 
 /**
@@ -16,9 +15,14 @@ use SimpleXMLElement;
  *      produces the fiscal receipt (commercial document).
  *
  * The wire format is documented in the Epson "ePOS Fiscal Print Solution
- * Development Guide" (FP 000 055 EN Rev. U). All responses are parsed
- * into a normalized PHP array regardless of which root element the
- * printer returned.
+ * Development Guide" (FP 000 055 EN Rev. U). Under the XML layer, the
+ * printer speaks A.PDU (FP 000 008 EN Rev. 8.10) — error codes returned
+ * by the printer match that document's §8.3 error table, so the log
+ * hints reference it for diagnosis.
+ *
+ * Every public method opens a Log scope (correlation id) so that the
+ * request, response, parse step and final outcome all appear under the
+ * same `rid` in storage/logs/fiscal-YYYY-MM-DD.log.
  */
 final class Client
 {
@@ -39,43 +43,74 @@ final class Client
      */
     public function authorizeSales(int $amountCents): array
     {
-        if (!$this->enabled()) {
-            return ['ok' => false, 'error' => 'fiscal_printer_disabled'];
-        }
-
         $operator = (string) ($this->cfg['operator'] ?? '1');
-        $amount   = number_format($amountCents / 100, 2, '.', '');
-
-        $xml = sprintf(
-            '<printerCommand><authorizeSales operator="%s" amount="%s" /></printerCommand>',
-            htmlspecialchars($operator, ENT_QUOTES | ENT_XML1, 'UTF-8'),
-            $amount
-        );
-
-        $res = $this->request($xml, [
-            'timeout' => (int) ($this->cfg['timeout_ms'] ?? 35000),
+        $rid = Log::begin('authorizeSales', [
+            'amount_cents' => $amountCents,
+            'operator'     => $operator,
+            'base_url'     => $this->cfg['base_url'] ?? null,
         ]);
 
-        if (!$res['ok']) return $res;
+        try {
+            if (!$this->enabled()) {
+                Log::error('fiscal_printer_disabled', ['where' => 'authorizeSales']);
+                return ['ok' => false, 'error' => 'fiscal_printer_disabled'];
+            }
 
-        $add    = $res['add_info'] ?? [];
-        $result = (string) ($add['transactionResult'] ?? '');
+            $amount = number_format($amountCents / 100, 2, '.', '');
 
-        // Per the dev guide: transactionResult "00" = approved, "01" = declined.
-        if ($result === '00') {
+            $xml = sprintf(
+                '<printerCommand><authorizeSales operator="%s" amount="%s" /></printerCommand>',
+                htmlspecialchars($operator, ENT_QUOTES | ENT_XML1, 'UTF-8'),
+                $amount
+            );
+
+            Log::info('authorize_request_built', [
+                'amount'   => $amount,
+                'operator' => $operator,
+            ]);
+
+            $res = $this->request($xml, [
+                'timeout' => (int) ($this->cfg['timeout_ms'] ?? 35000),
+            ]);
+
+            if (!$res['ok']) {
+                // request() already logged transport/parse failure with hint.
+                return $res;
+            }
+
+            $add    = $res['add_info'] ?? [];
+            $result = (string) ($add['transactionResult'] ?? '');
+
+            // Per the dev guide: transactionResult "00" = approved, "01" = declined.
+            if ($result === '00') {
+                $out = [
+                    'ok'     => true,
+                    'status' => 'approved',
+                    'lines'  => $this->extractLines($add),
+                ];
+                Log::info('authorize_approved', [
+                    'line_count' => count($out['lines']),
+                ]);
+                return $out;
+            }
+
+            $err = trim((string) ($add['failureDescription'] ?? '')) ?: 'card_declined';
+            $event = $result !== '' ? 'card_declined' : 'authorize_unknown';
+            Log::error($event, [
+                'error'              => $err,
+                'transactionResult'  => $result,
+                'failureDescription' => $add['failureDescription'] ?? null,
+            ]);
+
             return [
-                'ok'     => true,
-                'status' => 'approved',
+                'ok'     => false,
+                'error'  => $err,
+                'status' => $result !== '' ? 'declined' : 'unknown',
                 'lines'  => $this->extractLines($add),
             ];
+        } finally {
+            Log::end($rid);
         }
-
-        return [
-            'ok'     => false,
-            'error'  => trim($add['failureDescription'] ?? 'card_declined'),
-            'status' => $result !== '' ? 'declined' : 'unknown',
-            'lines'  => $this->extractLines($add),
-        ];
     }
 
     /**
@@ -89,25 +124,59 @@ final class Client
      */
     public function emit(array $items, int $amountCents, string $method): array
     {
-        if (!$this->enabled()) {
-            return ['ok' => false, 'error' => 'fiscal_printer_disabled'];
-        }
-
         $operator = (string) ($this->cfg['operator'] ?? '1');
-        $xml = Receipt::build($items, $amountCents, $method, $operator);
+        $rid = Log::begin('emit', [
+            'amount_cents' => $amountCents,
+            'method'       => $method,
+            'operator'     => $operator,
+            'item_count'   => count($items),
+            'items'        => $this->summariseItems($items),
+            'base_url'     => $this->cfg['base_url'] ?? null,
+        ]);
 
-        $res = $this->request($xml);
-        if (!$res['ok']) return $res;
+        try {
+            if (!$this->enabled()) {
+                Log::error('fiscal_printer_disabled', ['where' => 'emit']);
+                return ['ok' => false, 'error' => 'fiscal_printer_disabled'];
+            }
 
-        $add = $res['add_info'] ?? [];
-        return [
-            'ok'             => true,
-            'receipt_number' => (string) ($add['fiscalReceiptNumber'] ?? ''),
-            'receipt_date'   => (string) ($add['fiscalReceiptDate']   ?? ''),
-            'receipt_time'   => (string) ($add['fiscalReceiptTime']   ?? ''),
-            'z_rep_number'   => (string) ($add['zRepNumber']          ?? ''),
-            'serial_number'  => (string) ($add['serialNumber']        ?? ''),
-        ];
+            $xml = Receipt::build($items, $amountCents, $method, $operator);
+            Log::info('emit_xml_built', ['xml_length' => strlen($xml)]);
+
+            $res = $this->request($xml);
+            if (!$res['ok']) {
+                // request() already logged transport/parse/printer failure.
+                Log::error('fiscal_emit_failed', [
+                    'error'        => $res['error']  ?? '?',
+                    'status'       => $res['status'] ?? null,
+                    'amount_cents' => $amountCents,
+                    'method'       => $method,
+                ]);
+                return $res;
+            }
+
+            $add = $res['add_info'] ?? [];
+            $out = [
+                'ok'             => true,
+                'receipt_number' => (string) ($add['fiscalReceiptNumber'] ?? ''),
+                'receipt_date'   => (string) ($add['fiscalReceiptDate']   ?? ''),
+                'receipt_time'   => (string) ($add['fiscalReceiptTime']   ?? ''),
+                'z_rep_number'   => (string) ($add['zRepNumber']          ?? ''),
+                'serial_number'  => (string) ($add['serialNumber']        ?? ''),
+            ];
+
+            Log::info('emit_success', [
+                'receipt_number' => $out['receipt_number'],
+                'receipt_date'   => $out['receipt_date'],
+                'receipt_time'   => $out['receipt_time'],
+                'z_rep_number'   => $out['z_rep_number'],
+                'serial_number'  => $out['serial_number'],
+            ]);
+
+            return $out;
+        } finally {
+            Log::end($rid);
+        }
     }
 
     /**
@@ -127,6 +196,19 @@ final class Client
         $url = rtrim((string) $this->cfg['base_url'], '/') . '/cgi-bin/fpmate.cgi';
         if ($query) $url .= '?' . http_build_query($query);
 
+        $timeoutMs = (int) ($opts['timeout'] ?? ($this->cfg['timeout_ms'] ?? 15000));
+        $curlTimeout = max(1, (int) ($timeoutMs / 1000) + 5);
+
+        Log::info('http_request', [
+            'url'         => $url,
+            'method'      => 'POST',
+            'timeout_ms'  => $timeoutMs,
+            'curl_to_sec' => $curlTimeout,
+            'verify_ssl'  => !empty($this->cfg['verify_ssl']),
+            'body_length' => strlen($envelope),
+            'body'        => $this->truncate($envelope, 4000),
+        ]);
+
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -138,18 +220,48 @@ final class Client
             CURLOPT_POSTFIELDS     => $envelope,
             CURLOPT_SSL_VERIFYPEER => !empty($this->cfg['verify_ssl']),
             CURLOPT_SSL_VERIFYHOST => !empty($this->cfg['verify_ssl']) ? 2 : 0,
-            CURLOPT_TIMEOUT        => (int) (($opts['timeout'] ?? ($this->cfg['timeout_ms'] ?? 15000)) / 1000) + 5,
+            CURLOPT_TIMEOUT        => $curlTimeout,
+            CURLOPT_CONNECTTIMEOUT => 5,
         ]);
 
+        $started = microtime(true);
         $raw = curl_exec($ch);
+        $durMs = (int) ((microtime(true) - $started) * 1000);
+
         if ($raw === false) {
-            $err = curl_error($ch);
+            $errno = curl_errno($ch);
+            $err   = curl_error($ch);
+            $info  = curl_getinfo($ch);
             curl_close($ch);
+
+            Log::error('curl: ' . $err, [
+                'error'         => 'curl: ' . $err,
+                'curl_errno'    => $errno,
+                'duration_ms'   => $durMs,
+                'connect_time'  => $info['connect_time']     ?? null,
+                'namelookup'    => $info['namelookup_time']  ?? null,
+                'primary_ip'    => $info['primary_ip']       ?? null,
+                'primary_port'  => $info['primary_port']     ?? null,
+                'url'           => $url,
+            ]);
+
             return ['ok' => false, 'error' => 'curl: ' . $err];
         }
+
+        $httpCode = (int) (curl_getinfo($ch, CURLINFO_RESPONSE_CODE) ?: 0);
+        $info     = curl_getinfo($ch);
         curl_close($ch);
 
-        return $this->parse($raw);
+        Log::info('http_response', [
+            'http_status'  => $httpCode,
+            'duration_ms'  => $durMs,
+            'primary_ip'   => $info['primary_ip']   ?? null,
+            'primary_port' => $info['primary_port'] ?? null,
+            'body_length'  => strlen((string) $raw),
+            'body'         => $this->truncate((string) $raw, 4000),
+        ]);
+
+        return $this->parse((string) $raw);
     }
 
     /**
@@ -165,11 +277,18 @@ final class Client
         $prev = libxml_use_internal_errors(true);
         try {
             $doc = simplexml_load_string($raw);
+            $libErrors = libxml_get_errors();
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($prev);
         }
         if (!$doc instanceof SimpleXMLElement) {
+            $errs = array_map(static fn($e) => trim($e->message ?? ''), $libErrors ?: []);
+            Log::error('parse_failed', [
+                'error'      => 'invalid_xml',
+                'libxml'     => $errs,
+                'raw_excerpt' => substr($raw, 0, 500),
+            ]);
             return ['ok' => false, 'error' => 'invalid_xml', 'raw' => substr($raw, 0, 500)];
         }
         $ns = $doc->getNamespaces(true);
@@ -178,6 +297,10 @@ final class Client
             : $doc->Body;
         $response = $body->response ?? null;
         if (!$response) {
+            Log::error('no_response_node', [
+                'error'       => 'no_response_node',
+                'raw_excerpt' => substr($raw, 0, 500),
+            ]);
             return ['ok' => false, 'error' => 'no_response_node', 'raw' => substr($raw, 0, 500)];
         }
 
@@ -203,7 +326,20 @@ final class Client
             }
         }
 
+        Log::info('parse_ok', [
+            'success'        => $success,
+            'code'           => $code,
+            'status'         => $status,
+            'add_info_keys'  => array_keys($addInfo),
+        ]);
+
         if (!$success) {
+            Log::error('printer_error', [
+                'error'    => $code !== '' ? $code : 'printer_error',
+                'code'     => $code,
+                'status'   => $status,
+                'add_info' => $this->summariseAddInfo($addInfo),
+            ]);
             return [
                 'ok'       => false,
                 'error'    => $code !== '' ? $code : 'printer_error',
@@ -223,5 +359,44 @@ final class Client
     private function extractLines(array $add): array
     {
         return is_array($add['lines'] ?? null) ? $add['lines'] : [];
+    }
+
+    private function truncate(string $s, int $max): string
+    {
+        if (strlen($s) <= $max) return $s;
+        return substr($s, 0, $max) . '...[' . (strlen($s) - $max) . ' more bytes]';
+    }
+
+    /**
+     * Strip noisy/long fields out of addInfo so the error log entry
+     * stays scannable. The full block is still in the parse_ok line
+     * above for forensic reconstruction.
+     */
+    private function summariseAddInfo(array $add): array
+    {
+        $out = [];
+        foreach ($add as $k => $v) {
+            if (is_array($v)) {
+                $out[$k] = 'array(' . count($v) . ')';
+            } else {
+                $s = (string) $v;
+                $out[$k] = strlen($s) > 120 ? substr($s, 0, 120) . '...' : $s;
+            }
+        }
+        return $out;
+    }
+
+    private function summariseItems(array $items): array
+    {
+        $out = [];
+        foreach ($items as $it) {
+            $out[] = [
+                'desc' => (string) ($it['description'] ?? ''),
+                'qty'  => (string) ($it['quantity']    ?? ''),
+                'unit' => (string) ($it['unitPrice']   ?? ''),
+                'dept' => (string) ($it['department']  ?? ''),
+            ];
+        }
+        return $out;
     }
 }

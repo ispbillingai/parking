@@ -8,6 +8,7 @@ use Parking\Admin\Settings;
 use Parking\Cashmatic\SessionClient;
 use Parking\Db;
 use Parking\Fiscal\Client as FiscalClient;
+use Parking\Fiscal\Log as FiscalLog;
 use Parking\Payment\Confirmer;
 
 $pdo = Db::pdo($cfg['db']);
@@ -64,7 +65,23 @@ if (!$res['ok']) {
 // does not roll back the confirmation — the customer already paid.
 $receipt = null;
 $fiscal  = new FiscalClient($cfg['fiscal_printer'] ?? []);
-if ($fiscal->enabled()) {
+
+FiscalLog::info('fiscal_attempt', [
+    'endpoint'     => 'cashmatic-finish',
+    'method'       => 'cash',
+    'pin'          => $pin,
+    'amount_cents' => $amount,
+    'cashmatic_id' => $cmTxId,
+    'enabled'      => $fiscal->enabled(),
+]);
+
+if (!$fiscal->enabled()) {
+    FiscalLog::warn('fiscal_skipped_not_enabled', [
+        'endpoint'     => 'cashmatic-finish',
+        'pin'          => $pin,
+        'amount_cents' => $amount,
+    ]);
+} else {
     $emit = $fiscal->emit(
         [[
             'description' => 'PARCHEGGIO',
@@ -77,8 +94,23 @@ if ($fiscal->enabled()) {
     );
     if ($emit['ok']) {
         $receipt = $emit;
+        FiscalLog::info('fiscal_result', [
+            'endpoint'       => 'cashmatic-finish',
+            'pin'            => $pin,
+            'ok'             => true,
+            'receipt_number' => $emit['receipt_number'] ?? '',
+            'receipt_date'   => $emit['receipt_date']   ?? '',
+            'z_rep_number'   => $emit['z_rep_number']   ?? '',
+        ]);
     } else {
-        error_log('fiscal receipt emit failed (cashier-pay cash): ' . ($emit['error'] ?? '?'));
+        FiscalLog::error('fiscal_result', [
+            'endpoint'     => 'cashmatic-finish',
+            'pin'          => $pin,
+            'amount_cents' => $amount,
+            'method'       => 'cash',
+            'error'        => $emit['error'] ?? '?',
+            'note'         => 'cash already collected — issue manual receipt before next Z-report',
+        ]);
         Db::logEvent($pdo, null, $pin, 'payment_fail', [
             'stage' => 'fiscal_receipt',
             'error' => $emit['error'] ?? '?',

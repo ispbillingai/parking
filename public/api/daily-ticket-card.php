@@ -7,6 +7,7 @@ $cfg = require __DIR__ . '/../../config/config.php';
 use Parking\Admin\Settings;
 use Parking\Db;
 use Parking\Fiscal\Client as FiscalClient;
+use Parking\Fiscal\Log as FiscalLog;
 use Parking\Notify\Mailer;
 use Parking\Pin\Generator;
 use Parking\Subscription\DailyTicket;
@@ -24,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $fiscal = new FiscalClient($cfg['fiscal_printer'] ?? []);
 if (!$fiscal->enabled()) {
+    FiscalLog::error('fiscal_printer_disabled', [
+        'endpoint' => 'daily-ticket-card',
+        'note'     => 'endpoint refused — card flow needs the printer to drive EFT-POS',
+    ]);
     echo json_encode(['ok' => false, 'error' => 'fiscal_printer_not_configured']);
     exit;
 }
@@ -57,8 +62,29 @@ $amount = (int) $plan['price_cents'];
 
 // Customer taps card. authorizeSales blocks here until the POS terminal
 // returns (approved or declined) or the printer-side timeout fires.
+FiscalLog::info('fiscal_attempt', [
+    'endpoint'     => 'daily-ticket-card',
+    'stage'        => 'authorizeSales',
+    'method'       => 'card',
+    'pin'          => $pin,
+    'plan_id'      => (int) $plan['id'],
+    'amount_cents' => $amount,
+    'phone'        => $phone,
+    'email'        => $email,
+]);
+
 $auth = $fiscal->authorizeSales($amount);
 if (!$auth['ok']) {
+    FiscalLog::error('fiscal_result', [
+        'endpoint'     => 'daily-ticket-card',
+        'stage'        => 'authorizeSales',
+        'pin'          => $pin,
+        'plan_id'      => (int) $plan['id'],
+        'amount_cents' => $amount,
+        'error'        => $auth['error']  ?? '?',
+        'status'       => $auth['status'] ?? null,
+        'note'         => 'card NOT charged — subscription not issued; customer can retry',
+    ]);
     Db::logEvent($pdo, null, $pin, 'payment_fail', [
         'stage'  => 'authorizeSales',
         'method' => 'card',
@@ -72,6 +98,12 @@ if (!$auth['ok']) {
     ]);
     exit;
 }
+
+FiscalLog::info('authorize_ok', [
+    'endpoint'  => 'daily-ticket-card',
+    'pin'       => $pin,
+    'eft_lines' => count($auth['lines'] ?? []),
+]);
 
 // Card approved → issue the subscription and deliver the PIN.
 $result = DailyTicket::issue(
@@ -88,6 +120,17 @@ if (!$result['ok']) {
 
 // Fiscal receipt with paymentType=2 (electronic) + spliced EFT-POS lines.
 $receipt = null;
+FiscalLog::info('fiscal_attempt', [
+    'endpoint'        => 'daily-ticket-card',
+    'stage'           => 'emit',
+    'method'          => 'card',
+    'pin'             => $pin,
+    'plan_id'         => (int) $plan['id'],
+    'plan_name'       => (string) $plan['name'],
+    'amount_cents'    => $amount,
+    'subscription_id' => $result['subscription_id'] ?? null,
+]);
+
 $emit = $fiscal->emit(
     [[
         'description' => substr((string) $plan['name'], 0, 38),
@@ -100,8 +143,26 @@ $emit = $fiscal->emit(
 );
 if ($emit['ok']) {
     $receipt = $emit;
+    FiscalLog::info('fiscal_result', [
+        'endpoint'        => 'daily-ticket-card',
+        'pin'             => $pin,
+        'subscription_id' => $result['subscription_id'] ?? null,
+        'ok'              => true,
+        'receipt_number'  => $emit['receipt_number'] ?? '',
+        'receipt_date'    => $emit['receipt_date']   ?? '',
+        'z_rep_number'    => $emit['z_rep_number']   ?? '',
+    ]);
 } else {
-    error_log('fiscal receipt emit failed (daily-ticket card): ' . ($emit['error'] ?? '?'));
+    FiscalLog::error('fiscal_result', [
+        'endpoint'        => 'daily-ticket-card',
+        'stage'           => 'emit',
+        'pin'             => $pin,
+        'subscription_id' => $result['subscription_id'] ?? null,
+        'amount_cents'    => $amount,
+        'method'          => 'card',
+        'error'           => $emit['error'] ?? '?',
+        'note'            => 'card charged + subscription issued but receipt NOT emitted — issue manual receipt before next Z-report',
+    ]);
     Db::logEvent($pdo, null, $pin, 'payment_fail', [
         'stage' => 'fiscal_receipt',
         'error' => $emit['error'] ?? '?',
