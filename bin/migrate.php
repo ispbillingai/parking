@@ -37,6 +37,16 @@ function fkExists(PDO $pdo, string $table, string $name): bool {
     return (bool) $stmt->fetchColumn();
 }
 
+function enumHas(PDO $pdo, string $table, string $col, string $value): bool {
+    $stmt = $pdo->prepare(
+        'SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1'
+    );
+    $stmt->execute([$table, $col]);
+    $type = (string) $stmt->fetchColumn();
+    return $type !== '' && str_contains($type, "'$value'");
+}
+
 function step(string $msg): void { echo $msg . "\n"; }
 
 step('-- creating new tables (IF NOT EXISTS)');
@@ -61,7 +71,7 @@ $pdo->exec(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(40) NOT NULL,
     name VARCHAR(120) NOT NULL,
-    period ENUM('weekly','monthly','annual') NOT NULL,
+    period ENUM('daily','weekly','monthly','annual') NOT NULL,
     price_cents INT UNSIGNED NOT NULL DEFAULT 0,
     active TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -78,6 +88,7 @@ $pdo->exec(
     key_code VARCHAR(40) NOT NULL,
     starts_on DATE NOT NULL,
     ends_on DATE NOT NULL,
+    expires_at DATETIME NULL,
     status ENUM('active','suspended','expired','cancelled') NOT NULL DEFAULT 'active',
     notes VARCHAR(255) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -87,6 +98,7 @@ $pdo->exec(
     KEY idx_sub_plan (plan_id),
     KEY idx_sub_status (status),
     KEY idx_sub_ends (ends_on),
+    KEY idx_sub_expires (expires_at),
     CONSTRAINT fk_sub_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     CONSTRAINT fk_sub_plan FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -162,7 +174,8 @@ $pdo->exec(
     'entry','scan_at_pay','payment_start','payment_ok','payment_fail',
     'scan_at_exit','gate_open','denied','whatsapp_sent','whatsapp_fail',
     'email_sent','email_fail','subscription_entry','subscription_exit',
-    'subscription_payment','admin_login','admin_logout','admin_action'
+    'subscription_payment','daily_ticket_sold',
+    'admin_login','admin_logout','admin_action'
 ) NOT NULL");
 step('   widened event_type ENUM');
 
@@ -213,6 +226,32 @@ foreach ($defaults as $d) {
         $insert->execute([$d['channel'], $d['event_key'], $d['subject'], $d['body']]);
         step('   seeded ' . $d['channel'] . '/' . $d['event_key']);
     }
+}
+
+step('-- daily-ticket support');
+
+// 'daily' period: present in fresh-install CREATE above; ALTER existing rows.
+if (!enumHas($pdo, 'subscription_plans', 'period', 'daily')) {
+    $pdo->exec("ALTER TABLE subscription_plans
+        MODIFY COLUMN period ENUM('daily','weekly','monthly','annual') NOT NULL");
+    step("   added 'daily' to subscription_plans.period enum");
+}
+
+// expires_at: rolling 24h cutoff used only by daily plans; weekly/monthly/annual
+// keep using ends_on as before.
+if (!colExists($pdo, 'subscriptions', 'expires_at')) {
+    $pdo->exec("ALTER TABLE subscriptions
+        ADD COLUMN expires_at DATETIME NULL AFTER ends_on,
+        ADD KEY idx_sub_expires (expires_at)");
+    step('   added subscriptions.expires_at');
+}
+
+// Seed a default daily plan if none exists; admin can edit the price.
+$hasDaily = (bool) $pdo->query("SELECT 1 FROM subscription_plans WHERE period='daily' LIMIT 1")->fetchColumn();
+if (!$hasDaily) {
+    $pdo->exec("INSERT INTO subscription_plans (code, name, period, price_cents, active)
+                VALUES ('DAY_PASS', 'Daily ticket (24h)', 'daily', 500, 1)");
+    step('   seeded DAY_PASS plan (€5.00)');
 }
 
 step("\nDONE. tables now:");
