@@ -26,6 +26,7 @@ $sections = [
             ['href' => 'entrance.php?format=json','label_key'=>'links_kiosk_entrance_json_label','why_key'=>'links_kiosk_entrance_json_why'],
             ['href' => 'totem.php',             'label_key' => 'links_kiosk_totem_label',      'why_key' => 'links_kiosk_totem_why'],
             ['href' => 'subscriber-entry.php',  'label_key' => 'links_kiosk_subentry_label',   'why_key' => 'links_kiosk_subentry_why'],
+            ['href' => 'daily-ticket.php',      'label_key' => 'links_kiosk_daily_label',      'why_key' => 'links_kiosk_daily_why'],
             ['href' => 'pay.php',               'label_key' => 'links_kiosk_pay_label',        'why_key' => 'links_kiosk_pay_why'],
             ['href' => 'cashier-pay.php',       'label_key' => 'links_kiosk_cashier_label',    'why_key' => 'links_kiosk_cashier_why'],
             ['href' => 'gate-scan.php',         'label_key' => 'links_kiosk_gatescan_label',   'why_key' => 'links_kiosk_gatescan_why'],

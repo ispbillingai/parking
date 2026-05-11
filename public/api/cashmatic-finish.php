@@ -7,9 +7,11 @@ $cfg = require __DIR__ . '/../../config/config.php';
 use Parking\Admin\Settings;
 use Parking\Cashmatic\SessionClient;
 use Parking\Db;
+use Parking\Fiscal\Client as FiscalClient;
 use Parking\Payment\Confirmer;
 
-$cfg = Settings::overlay($cfg, Db::pdo($cfg['db']));
+$pdo = Db::pdo($cfg['db']);
+$cfg = Settings::overlay($cfg, $pdo);
 
 header('Content-Type: application/json');
 
@@ -58,10 +60,37 @@ if (!$res['ok']) {
     exit;
 }
 
+// Emit the fiscal receipt for the cash payment. Failure is logged but
+// does not roll back the confirmation — the customer already paid.
+$receipt = null;
+$fiscal  = new FiscalClient($cfg['fiscal_printer'] ?? []);
+if ($fiscal->enabled()) {
+    $emit = $fiscal->emit(
+        [[
+            'description' => 'PARCHEGGIO',
+            'quantity'    => '1',
+            'unitPrice'   => number_format($amount / 100, 2, '.', ''),
+            'department'  => 1,
+        ]],
+        $amount,
+        'cash'
+    );
+    if ($emit['ok']) {
+        $receipt = $emit;
+    } else {
+        error_log('fiscal receipt emit failed (cashier-pay cash): ' . ($emit['error'] ?? '?'));
+        Db::logEvent($pdo, null, $pin, 'payment_fail', [
+            'stage' => 'fiscal_receipt',
+            'error' => $emit['error'] ?? '?',
+        ]);
+    }
+}
+
 echo json_encode([
     'ok'           => true,
     'end'          => 'normal',
     'amount_cents' => $amount,
     'notDispensed' => $notDisp,
     'cashmatic_id' => $cmTxId,
+    'receipt'      => $receipt,
 ]);

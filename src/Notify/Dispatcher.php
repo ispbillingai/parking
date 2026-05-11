@@ -19,7 +19,7 @@ class Dispatcher
 
     public function sendTicket(
         PDO $pdo,
-        int $sessionId,
+        ?int $sessionId,
         string $pin,
         string $enteredAtHuman,
         ?string $phone,

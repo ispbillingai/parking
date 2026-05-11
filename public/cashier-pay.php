@@ -214,8 +214,10 @@ $browserCfg = [
   <div class="amount"><span class="cur"><?= htmlspecialchars($currencySymbol) ?></span><span id="amount"></span></div>
   <div class="actions">
     <button id="pay" class="primary"><?= htmlspecialchars(I18n::t('pay_start')) ?></button>
+    <button id="payCard" class="primary"><?= htmlspecialchars(I18n::t('pay_by_card')) ?></button>
     <button id="back"><?= htmlspecialchars(I18n::t('pay_abort')) ?></button>
   </div>
+  <p class="err" id="e2" style="margin-top:10px"></p>
 </div>
 
 <div id="s3" class="screen hidden">
@@ -366,6 +368,32 @@ $('pay').onclick = async () => {
     pollHandle = setInterval(pollActive, 300);
   } catch (e) {
     alert(e.message);
+  }
+};
+
+$('payCard').onclick = async () => {
+  $('e2').textContent = '';
+  $('payCard').disabled = true;
+  $('pay').disabled = true;
+  $('back').disabled = true;
+  try {
+    const r = await post('api/card-pay-cashier.php', {
+      pin: session.pin,
+      amount_cents: session.amount_cents,
+    });
+    if (!r.ok) {
+      $('e2').textContent = (CFG.i18n.payment_failed || '') + (r.error || '');
+      return;
+    }
+    renderSuccess(r.amount_cents, 0);
+    show('s4');
+    startAutoReset(CFG.auto_reset_seconds);
+  } catch (e) {
+    $('e2').textContent = e.message;
+  } finally {
+    $('payCard').disabled = false;
+    $('pay').disabled = false;
+    $('back').disabled = false;
   }
 };
 

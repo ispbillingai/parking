@@ -142,12 +142,31 @@ BEGIN
         'subscription_entry',
         'subscription_exit',
         'subscription_payment',
+        'daily_ticket_sold',
         'admin_login',
         'admin_logout',
         'admin_action'
     ) NOT NULL;
+
+    -- Daily ticket support: 'daily' period + rolling 24h expiry
+    ALTER TABLE subscription_plans
+        MODIFY COLUMN period ENUM('daily','weekly','monthly','annual') NOT NULL;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subscriptions' AND COLUMN_NAME = 'expires_at'
+    ) THEN
+        ALTER TABLE subscriptions
+            ADD COLUMN expires_at DATETIME NULL AFTER ends_on,
+            ADD KEY idx_sub_expires (expires_at);
+    END IF;
 END //
 DELIMITER ;
 
 CALL parking_apply_upgrade();
 DROP PROCEDURE parking_apply_upgrade;
+
+-- Seed a default daily plan if none exists (admin can edit price afterwards).
+INSERT INTO subscription_plans (code, name, period, price_cents, active)
+SELECT 'DAY_PASS', 'Daily ticket (24h)', 'daily', 500, 1
+WHERE NOT EXISTS (SELECT 1 FROM subscription_plans WHERE period = 'daily');

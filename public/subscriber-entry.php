@@ -38,9 +38,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' || isset($_GET['key'])) {
             $today = date('Y-m-d');
             $reason = null;
             if ($sub['status'] !== 'active') $reason = 'inactive';
-            elseif ($sub['ends_on'] < $today) $reason = 'expired';
+            // Daily tickets carry a precise expires_at (rolling 24h) and ignore
+            // the calendar-day ends_on; all other plans use the DATE column.
+            elseif (!empty($sub['expires_at'])) {
+                if (strtotime((string) $sub['expires_at']) <= time()) $reason = 'expired';
+            } elseif ($sub['ends_on'] < $today) {
+                $reason = 'expired';
+            }
 
-            $overdue = Scheduler::overdueCents($pdo, (int) $sub['id']);
+            // Daily passes are paid upfront in full — no installment schedule
+            // to chase, so skip the overdue check for them.
+            $overdue = ($sub['period'] === 'daily')
+                ? 0
+                : Scheduler::overdueCents($pdo, (int) $sub['id']);
             $blockOverdue = (int) ($cfg['app']['subscription_block_overdue'] ?? 1);
             if (!$reason && $blockOverdue && $overdue > 0) $reason = 'overdue';
 

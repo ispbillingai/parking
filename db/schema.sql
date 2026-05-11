@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(40) NOT NULL,
     name VARCHAR(120) NOT NULL,
-    period ENUM('weekly','monthly','annual') NOT NULL,
+    period ENUM('daily','weekly','monthly','annual') NOT NULL,
     price_cents INT UNSIGNED NOT NULL DEFAULT 0,
     active TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     key_code VARCHAR(40) NOT NULL,
     starts_on DATE NOT NULL,
     ends_on DATE NOT NULL,
+    expires_at DATETIME NULL,
     status ENUM('active','suspended','expired','cancelled') NOT NULL DEFAULT 'active',
     notes VARCHAR(255) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     KEY idx_sub_plan (plan_id),
     KEY idx_sub_status (status),
     KEY idx_sub_ends (ends_on),
+    KEY idx_sub_expires (expires_at),
     CONSTRAINT fk_sub_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     CONSTRAINT fk_sub_plan FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -159,6 +161,7 @@ CREATE TABLE IF NOT EXISTS gate_events (
         'subscription_entry',
         'subscription_exit',
         'subscription_payment',
+        'daily_ticket_sold',
         'admin_login',
         'admin_logout',
         'admin_action'

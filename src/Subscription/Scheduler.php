@@ -74,6 +74,7 @@ class Scheduler
     public static function advance(DateTimeImmutable $d, string $period): DateTimeImmutable
     {
         return match ($period) {
+            'daily'   => $d->modify('+1 day'),
             'weekly'  => $d->modify('+7 days'),
             'monthly' => $d->modify('+1 month'),
             'annual'  => $d->modify('+1 year'),

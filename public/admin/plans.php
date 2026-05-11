@@ -25,7 +25,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $price  = (int) round(((float) ($_POST['price'] ?? 0)) * 100);
         $active = isset($_POST['active']) ? 1 : 0;
 
-        if (!in_array($period, ['weekly','monthly','annual'], true)) $period = 'monthly';
+        if (!in_array($period, ['daily','weekly','monthly','annual'], true)) $period = 'monthly';
         if ($code === '' || $name === '' || $price < 0) {
             Layout::flash(I18n::t('flash_plan_min'), 'err');
         } else {
@@ -89,7 +89,7 @@ $csrf = Auth::csrfToken();
       </label>
       <label><?= htmlspecialchars(I18n::t('plan_period')) ?>
         <select name="period">
-          <?php foreach (['weekly','monthly','annual'] as $p): ?>
+          <?php foreach (['daily','weekly','monthly','annual'] as $p): ?>
             <option value="<?= $p ?>" <?= ($editing['period'] ?? '') === $p ? 'selected' : '' ?>><?= htmlspecialchars(I18n::t('period_' . $p)) ?></option>
           <?php endforeach; ?>
         </select>
