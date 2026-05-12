@@ -9,6 +9,7 @@ use Parking\Db;
 use Parking\Fiscal\Client as FiscalClient;
 use Parking\Fiscal\Log as FiscalLog;
 use Parking\Payment\Confirmer;
+use Parking\Pos\Client as PosClient;
 
 $pdo = Db::pdo($cfg['db']);
 $cfg = Settings::overlay($cfg, $pdo);
@@ -21,13 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$pos    = new PosClient($cfg['pos'] ?? []);
 $fiscal = new FiscalClient($cfg['fiscal_printer'] ?? []);
-if (!$fiscal->enabled()) {
-    FiscalLog::error('fiscal_printer_disabled', [
+
+if (!$pos->enabled()) {
+    FiscalLog::error('pos_disabled', [
         'endpoint' => 'card-pay-cashier',
-        'note'     => 'endpoint refused — card flow needs the printer to drive EFT-POS',
+        'note'     => 'endpoint refused — card flow needs a configured POS at pos.host/pos.port',
     ]);
-    echo json_encode(['ok' => false, 'error' => 'fiscal_printer_not_configured']);
+    echo json_encode(['ok' => false, 'error' => 'pos_not_configured']);
     exit;
 }
 
@@ -60,20 +63,17 @@ Db::logEvent($pdo, (int) $session['id'], $pin, 'payment_start', [
     'amount_cents' => $amount,
 ]);
 
-FiscalLog::info('fiscal_attempt', [
+FiscalLog::info('pos_attempt', [
     'endpoint'     => 'card-pay-cashier',
-    'stage'        => 'authorizeSales',
-    'method'       => 'card',
     'pin'          => $pin,
     'session_id'   => (int) $session['id'],
     'amount_cents' => $amount,
 ]);
 
-$auth = $fiscal->authorizeSales($amount);
+$auth = $pos->pay($amount);
 if (!$auth['ok']) {
-    FiscalLog::error('fiscal_result', [
+    FiscalLog::error('pos_result', [
         'endpoint'     => 'card-pay-cashier',
-        'stage'        => 'authorizeSales',
         'pin'          => $pin,
         'session_id'   => (int) $session['id'],
         'amount_cents' => $amount,
@@ -82,7 +82,7 @@ if (!$auth['ok']) {
         'note'         => 'card NOT charged — safe to retry or fall back to cash',
     ]);
     Db::logEvent($pdo, (int) $session['id'], $pin, 'payment_fail', [
-        'stage'  => 'authorizeSales',
+        'stage'  => 'pos_pay',
         'method' => 'card',
         'error'  => $auth['error'] ?? '?',
     ]);
@@ -94,11 +94,12 @@ if (!$auth['ok']) {
     exit;
 }
 
-FiscalLog::info('authorize_ok', [
+FiscalLog::info('pos_ok', [
     'endpoint'   => 'card-pay-cashier',
     'pin'        => $pin,
     'session_id' => (int) $session['id'],
-    'eft_lines'  => count($auth['lines'] ?? []),
+    'auth_code'  => $auth['auth_code'] ?? null,
+    'slip_lines' => count($auth['lines'] ?? []),
 ]);
 
 $confirm = (new Confirmer($cfg))->confirm($pin, $amount, null);
@@ -113,50 +114,60 @@ if (!$confirm['ok']) {
 }
 
 $receipt = null;
-FiscalLog::info('fiscal_attempt', [
-    'endpoint'     => 'card-pay-cashier',
-    'stage'        => 'emit',
-    'method'       => 'card',
-    'pin'          => $pin,
-    'session_id'   => (int) $session['id'],
-    'amount_cents' => $amount,
-]);
-
-$emit = $fiscal->emit(
-    [[
-        'description' => 'PARCHEGGIO',
-        'quantity'    => '1',
-        'unitPrice'   => number_format($amount / 100, 2, '.', ''),
-        'department'  => 1,
-    ]],
-    $amount,
-    'card'
-);
-if ($emit['ok']) {
-    $receipt = $emit;
-    FiscalLog::info('fiscal_result', [
-        'endpoint'       => 'card-pay-cashier',
-        'pin'            => $pin,
-        'session_id'     => (int) $session['id'],
-        'ok'             => true,
-        'receipt_number' => $emit['receipt_number'] ?? '',
-        'receipt_date'   => $emit['receipt_date']   ?? '',
-        'z_rep_number'   => $emit['z_rep_number']   ?? '',
-    ]);
-} else {
-    FiscalLog::error('fiscal_result', [
+if ($fiscal->enabled()) {
+    FiscalLog::info('fiscal_attempt', [
         'endpoint'     => 'card-pay-cashier',
         'stage'        => 'emit',
+        'method'       => 'card',
         'pin'          => $pin,
         'session_id'   => (int) $session['id'],
         'amount_cents' => $amount,
-        'method'       => 'card',
-        'error'        => $emit['error'] ?? '?',
-        'note'         => 'card already charged but receipt NOT emitted — issue manual receipt before next Z-report',
     ]);
-    Db::logEvent($pdo, (int) $session['id'], $pin, 'payment_fail', [
-        'stage' => 'fiscal_receipt',
-        'error' => $emit['error'] ?? '?',
+
+    $emit = $fiscal->emit(
+        [[
+            'description' => 'PARCHEGGIO',
+            'quantity'    => '1',
+            'unitPrice'   => number_format($amount / 100, 2, '.', ''),
+            'department'  => 1,
+        ]],
+        $amount,
+        'card'
+    );
+    if ($emit['ok']) {
+        $receipt = $emit;
+        FiscalLog::info('fiscal_result', [
+            'endpoint'       => 'card-pay-cashier',
+            'pin'            => $pin,
+            'session_id'     => (int) $session['id'],
+            'ok'             => true,
+            'receipt_number' => $emit['receipt_number'] ?? '',
+            'receipt_date'   => $emit['receipt_date']   ?? '',
+            'z_rep_number'   => $emit['z_rep_number']   ?? '',
+        ]);
+    } else {
+        FiscalLog::error('fiscal_result', [
+            'endpoint'     => 'card-pay-cashier',
+            'stage'        => 'emit',
+            'pin'          => $pin,
+            'session_id'   => (int) $session['id'],
+            'amount_cents' => $amount,
+            'method'       => 'card',
+            'error'        => $emit['error'] ?? '?',
+            'note'         => 'card already charged but receipt NOT emitted — issue manual receipt before next Z-report',
+        ]);
+        Db::logEvent($pdo, (int) $session['id'], $pin, 'payment_fail', [
+            'stage' => 'fiscal_receipt',
+            'error' => $emit['error'] ?? '?',
+        ]);
+    }
+} else {
+    FiscalLog::warn('fiscal_skipped_not_enabled', [
+        'endpoint'     => 'card-pay-cashier',
+        'pin'          => $pin,
+        'session_id'   => (int) $session['id'],
+        'amount_cents' => $amount,
+        'note'         => 'card charged on POS but no fiscal printer configured — manual receipt required',
     ]);
 }
 

@@ -81,6 +81,28 @@ return [
         ],
     ],
 
+    // Ingenico iPP320 EFT-POS terminal (direct TCP / "Protocollo 17").
+    //
+    // The VPS opens a TCP socket straight to the terminal — no fiscal
+    // printer in this path. Reachability is provided by a Tailscale
+    // tunnel: install the Tailscale agent on a LAN machine with
+    //   tailscale up --advertise-routes=192.164.1.0/24 --accept-routes
+    // and on the VPS with --accept-routes, then approve the route in
+    // https://login.tailscale.com/admin/machines. After that, the VPS
+    // can reach 192.164.1.26 by its real LAN IP.
+    //
+    // ⚠️  The Protocollo 17 frame builder/parser in Pos\Client is
+    // still a TODO — pay() will return 'protocollo17_not_implemented'
+    // until those two methods are filled in from the Nexi/CB spec.
+    // The TCP plumbing, logging, and endpoint wiring are in place.
+    'pos' => [
+        'host'            => '192.164.1.26',
+        'port'            => 5040,
+        'operator'        => '1',
+        'connect_timeout' => 5,     // seconds — TCP handshake
+        'read_timeout'    => 35,    // seconds — covers the card-tap window
+    ],
+
     'app' => [
         'base_url'                  => 'https://your-domain.example',
         'pin_ttl_after_pay_minutes' => 15,
