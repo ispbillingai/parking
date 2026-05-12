@@ -6,33 +6,61 @@ namespace Parking\Pos;
 use Parking\Fiscal\Log;
 
 /**
- * Raw TCP client for the Ingenico iPP320 EFT-POS terminal.
- *
- * Architecture (replacing the Epson-style "printer drives the POS" path):
+ * Raw TCP client for the Ingenico iPP320 EFT-POS terminal speaking
+ * Italian "Protocollo 17" (ECR17) over LAN.
  *
  *   [PHP on VPS]
  *       │  fsockopen() over Tailscale
  *       ▼
  *   [iPP320 @ 192.164.1.26:5040]
- *       │  speaks Italian "Protocollo 17" (Nexi/CB ECR binary framing)
+ *       │  Protocollo 17 — STX/ETX framing + LRC
  *       ▼
- *   acquirer over GSM/Ethernet
+ *   Nexi acquirer (over the terminal's own GSM/Ethernet uplink)
  *
- * Reachability test (already passing):
- *   nc -vz 192.164.1.26 5040  → succeeded
+ * Wire format (per Nexi developer portal,
+ * https://developer.nexigroup.com/traditionalpos/en-EU/docs/):
  *
- * ──────────────────────────────────────────────────────────────────────
- * GAP: buildFrame() / parseFrame()
+ *   STX (0x02) | application_message | ETX (0x03) | LRC
  *
- * The frame format is documented in the Nexi/CB "Protocollo 17 / ECR-POS
- * Specifiche" PDF that the cashier company / acquirer has to supply.
- * Until that document is on hand and the two methods below are filled
- * in, pay() returns ['ok' => false, 'error' => 'protocollo17_not_implemented'].
+ *   LRC = 0x7F XOR every byte of (application_message || ETX)
  *
- * Everything else (socket lifecycle, timeouts, hex/ascii logging,
- * structured correlation ids, hint strings on failure) is in place so
- * the day the spec arrives, it's a localized change.
- * ──────────────────────────────────────────────────────────────────────
+ *   ACK = 0x06 0x03 LRC   (request received, response coming)
+ *   NAK = 0x15 0x03 LRC   (bad LRC, retransmit; up to 3 attempts)
+ *
+ * Payment request 'P' (167 bytes, see buildFrame()):
+ *
+ *   1-8    terminal id  (8 digits ASCII, zero-padded)
+ *   9      '0' reserved
+ *   10     'P' message code
+ *   11-18  cash register id (8 digits ASCII, zero-padded)
+ *   19     additional-data flag '0' or '1'
+ *   20-21  '00' reserved
+ *   22     card-present flag '0'=insert at POS '1'=already inserted
+ *   23     payment type '0'=auto '1'=debit '2'=credit '3'=other
+ *   24-31  amount in cents (8 digits ASCII, zero-padded, right-aligned)
+ *   32-159 receipt text (128 chars, right-aligned, space-padded)
+ *   160-167 '00000000' reserved
+ *
+ * Payment response 'E' (71 bytes — see parseFrame()):
+ *
+ *   1-8    terminal id (echo)
+ *   9      '0'
+ *   10     'E' message code
+ *   11-12  result: "00"=OK "01"=KO "05"=card absent "09"=unknown tag
+ *
+ *   if "00" (approved):
+ *     13-31  masked PAN
+ *     32-34  txn type (ICC/MAG/MAN/CLM/CLI)
+ *     35-40  auth code
+ *     41-47  date/time DDDHHMM
+ *   if "01" (declined):
+ *     13-36  reason text (24 chars)
+ *     37-47  '0' reserved
+ *
+ *   48     card type '1'=Bancomat '2'=Credit '3'=Other
+ *   49-59  acquirer id
+ *   60-65  STAN
+ *   66-71  ID online
  */
 final class Client
 {
@@ -143,43 +171,147 @@ final class Client
     }
 
     /**
-     * Build the outbound Protocollo 17 binary frame for a card-sale request.
+     * Build the Protocollo 17 'P' payment-request frame.
      *
-     * Returns the raw bytes ready to write to the socket, or null while
-     * the spec is unavailable so that pay() can fail safely.
+     * Wire layout: STX (0x02) | 167-byte application message | ETX (0x03) | LRC.
+     * See class docblock for the application-message field map.
      */
     private function buildFrame(int $amountCents, string $operator): ?string
     {
-        // TODO(spec): implement once the Protocollo 17 / Nexi ECR PDF is in hand.
-        //   Expected fields (typical CB ECR layout — verify against the actual spec):
-        //     STX (0x02)
-        //     length (2 bytes big-endian, total payload length)
-        //     message-type (e.g. "00" for sale)
-        //     terminal-id (8 ASCII digits, zero-padded)
-        //     amount (12 ASCII digits, in cents, zero-padded)
-        //     currency code (3 ASCII digits — "978" = EUR)
-        //     transaction-id (6 ASCII digits, monotonic counter)
-        //     operator-id (variable)
-        //     ETX (0x03)
-        //     LRC (single XOR byte over message-type..ETX)
-        return null;
+        $terminalId    = self::padDigits((string) ($this->cfg['terminal_id']      ?? '00000001'), 8);
+        $cashRegister  = self::padDigits((string) ($this->cfg['cash_register_id'] ?? '00000001'), 8);
+        $paymentType   = (string) ($this->cfg['payment_type'] ?? '0');   // '0'=auto
+        $receiptText   = (string) ($this->cfg['receipt_text'] ?? 'PARCHEGGIO');
+
+        $msg  = $terminalId;                                                                   // 1-8
+        $msg .= '0';                                                                           // 9    reserved
+        $msg .= 'P';                                                                           // 10   message code
+        $msg .= $cashRegister;                                                                 // 11-18
+        $msg .= '0';                                                                           // 19   additional-data flag (no extra blocks)
+        $msg .= '00';                                                                          // 20-21 reserved
+        $msg .= '0';                                                                           // 22   card-present flag (will be inserted at POS)
+        $msg .= $paymentType;                                                                  // 23   payment type
+        $msg .= self::padDigits((string) max(0, $amountCents), 8);                             // 24-31 amount in cents
+        $msg .= str_pad(substr($receiptText, 0, 128), 128, ' ', STR_PAD_LEFT);                 // 32-159 receipt text right-aligned
+        $msg .= '00000000';                                                                    // 160-167 reserved
+
+        if (strlen($msg) !== 167) {
+            // Defensive — should never happen. Logged so we notice quickly.
+            Log::error('frame_length_invalid', [
+                'error'    => 'frame_length_invalid',
+                'expected' => 167,
+                'actual'   => strlen($msg),
+            ]);
+            return null;
+        }
+
+        $framed = "\x02" . $msg . "\x03";
+        // LRC = 0x7F XOR every byte from the start of the application message through ETX.
+        $lrc = self::lrc(substr($framed, 1)); // exclude STX itself
+        return $framed . chr($lrc);
     }
 
     /**
-     * Decode the POS response frame.
+     * Decode the Protocollo 17 'E' response frame.
      *
-     * Returns a normalized array:
-     *   ['approved'=>true, 'auth_code'=>'123456', 'lines'=>[...]]
-     *   ['approved'=>false, 'decline_reason'=>'insufficient_funds', 'lines'=>[...]]
-     *   null when the bytes don't look like a valid Protocollo 17 reply
+     * Tolerates an optional ACK/NAK prefix from the terminal (some
+     * iPP320 firmware sends ACK immediately on receipt, then the full
+     * response after the card is processed — our exchange() does a long
+     * read so both arrive in the same buffer).
+     *
+     * @return array{approved:bool, decline_reason?:string, auth_code?:string, lines?:array}|null
      */
     private function parseFrame(string $raw): ?array
     {
-        // TODO(spec): implement once the Protocollo 17 / Nexi ECR PDF is in hand.
-        //   Typical reply layout:
-        //     STX, length, message-type, response-code ("00"=approved, others=declined),
-        //     auth-code, slip lines (printable text), ETX, LRC.
-        return null;
+        $len = strlen($raw);
+
+        // Find the STX that starts the actual response message. Skip any
+        // ACK (0x06) or NAK (0x15) prefix the terminal may have sent.
+        $stxPos = strpos($raw, "\x02");
+        if ($stxPos === false) {
+            // Maybe a bare NAK with no STX. Treat as decline so the caller
+            // sees something useful in logs.
+            if (strpos($raw, "\x15") !== false) {
+                return ['approved' => false, 'decline_reason' => 'nak_from_terminal', 'lines' => []];
+            }
+            return null;
+        }
+        $etxPos = strpos($raw, "\x03", $stxPos);
+        if ($etxPos === false) return null;
+
+        $msg = substr($raw, $stxPos + 1, $etxPos - $stxPos - 1);
+        if (strlen($msg) < 12) return null;
+
+        // Position 10 (zero-based 9) = message code; position 11-12 = result.
+        $msgCode = $msg[9] ?? '';
+        if ($msgCode !== 'E' && $msgCode !== 'V') {
+            return null;
+        }
+        $result = substr($msg, 10, 2);
+
+        // Common trailing fields (positions 48-71 → offsets 47..70).
+        // Only present when the message is long enough.
+        $common = [];
+        if (strlen($msg) >= 71) {
+            $common = [
+                'card_type'  => $msg[47] ?? '',
+                'acquirer'   => trim(substr($msg, 48, 11)),
+                'stan'       => substr($msg, 59, 6),
+                'id_online'  => substr($msg, 65, 6),
+            ];
+        }
+
+        if ($result === '00') {
+            return array_merge([
+                'approved'  => true,
+                'pan'       => trim(substr($msg, 12, 19)),
+                'txn_type'  => trim(substr($msg, 31, 3)),
+                'auth_code' => trim(substr($msg, 34, 6)),
+                'date_time' => trim(substr($msg, 40, 7)),
+                'lines'     => [],
+            ], $common);
+        }
+
+        if ($result === '01') {
+            return array_merge([
+                'approved'       => false,
+                'decline_reason' => trim(substr($msg, 12, 24)) ?: 'card_declined',
+                'lines'          => [],
+            ], $common);
+        }
+
+        $known = ['05' => 'card_absent', '09' => 'unknown_tag'];
+        return array_merge([
+            'approved'       => false,
+            'decline_reason' => $known[$result] ?? "result_{$result}",
+            'lines'          => [],
+        ], $common);
+    }
+
+    /**
+     * Compute Protocollo 17 LRC = 0x7F XOR every byte.
+     */
+    private static function lrc(string $bytes): int
+    {
+        $lrc = 0x7F;
+        $n   = strlen($bytes);
+        for ($i = 0; $i < $n; $i++) {
+            $lrc ^= ord($bytes[$i]);
+        }
+        return $lrc & 0xFF;
+    }
+
+    /**
+     * Right-align numeric string to exactly $len ASCII digits,
+     * zero-padded on the left, truncated from the left if too long.
+     */
+    private static function padDigits(string $value, int $len): string
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?: '0';
+        if (strlen($digits) > $len) {
+            $digits = substr($digits, -$len);
+        }
+        return str_pad($digits, $len, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -229,16 +361,40 @@ final class Client
             return null;
         }
 
+        // Read until we've seen the response 'E'/'V' frame's STX..ETX..LRC,
+        // not just any STX. The terminal may send ACK (3 bytes) before the
+        // full response, so we keep reading past the first ETX if the
+        // message body is too short to be a valid payment response.
         $resp = '';
         $deadline = microtime(true) + $readTo;
+        $minPaymentBody = 12;   // STX + 10 header bytes + result code is the minimum to classify
         while (!feof($sock) && microtime(true) < $deadline) {
             $chunk = @fread($sock, 4096);
-            if ($chunk === false || $chunk === '') break;
+            if ($chunk === false) break;
+            if ($chunk === '') {
+                // Empty read can mean "more later" — give the socket a tick.
+                usleep(50000);
+                $info = stream_get_meta_data($sock);
+                if (!empty($info['timed_out'])) break;
+                continue;
+            }
             $resp .= $chunk;
+
+            // Bail once we have a full 'E'/'V' response (STX, code, ETX, LRC).
+            $stx = strpos($resp, "\x02");
+            if ($stx !== false) {
+                $etx = strpos($resp, "\x03", $stx);
+                if ($etx !== false && ($etx - $stx) >= $minPaymentBody && strlen($resp) >= $etx + 2) {
+                    // Verify it's actually a payment response, not an ACK
+                    // (whose body is 1 byte: 0x06). Position 10 (0-based 9
+                    // inside the message) carries the message code.
+                    $code = $resp[$stx + 10] ?? '';
+                    if ($code === 'E' || $code === 'V') break;
+                }
+            }
+
             $info = stream_get_meta_data($sock);
             if (!empty($info['timed_out'])) break;
-            // Many POS replies fit in one TCP segment; bail when read seems done.
-            if (strlen($chunk) < 4096) break;
         }
         $durMs = (int) ((microtime(true) - $started) * 1000);
         fclose($sock);

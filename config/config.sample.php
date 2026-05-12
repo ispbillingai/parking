@@ -81,26 +81,31 @@ return [
         ],
     ],
 
-    // Ingenico iPP320 EFT-POS terminal (direct TCP / "Protocollo 17").
+    // Ingenico iPP320 EFT-POS terminal — direct TCP, Italian "Protocollo
+    // 17" (ECR17). See Pos\Client docblock and the Nexi developer portal:
+    //   https://developer.nexigroup.com/traditionalpos/en-EU/docs/
     //
-    // The VPS opens a TCP socket straight to the terminal — no fiscal
-    // printer in this path. Reachability is provided by a Tailscale
-    // tunnel: install the Tailscale agent on a LAN machine with
+    // Reachability: install Tailscale on a LAN machine with
     //   tailscale up --advertise-routes=192.164.1.0/24 --accept-routes
-    // and on the VPS with --accept-routes, then approve the route in
-    // https://login.tailscale.com/admin/machines. After that, the VPS
-    // can reach 192.164.1.26 by its real LAN IP.
+    // and on the VPS with --accept-routes. Approve the subnet route in
+    // https://login.tailscale.com/admin/machines. The VPS then reaches
+    // 192.164.1.26 by its real LAN IP. Verify with:
+    //   nc -vz 192.164.1.26 5040
     //
-    // ⚠️  The Protocollo 17 frame builder/parser in Pos\Client is
-    // still a TODO — pay() will return 'protocollo17_not_implemented'
-    // until those two methods are filled in from the Nexi/CB spec.
-    // The TCP plumbing, logging, and endpoint wiring are in place.
+    // terminal_id / cash_register_id are 8-digit ASCII identifiers
+    // pre-programmed into the terminal during installation — get them
+    // from the cashier company. Wrong values are rejected silently
+    // (terminal sees the request but won't process it).
     'pos' => [
-        'host'            => '192.164.1.26',
-        'port'            => 5040,
-        'operator'        => '1',
-        'connect_timeout' => 5,     // seconds — TCP handshake
-        'read_timeout'    => 35,    // seconds — covers the card-tap window
+        'host'             => '192.164.1.26',
+        'port'             => 5040,
+        'terminal_id'      => '00000001',   // 8 digits, ASCII, zero-padded
+        'cash_register_id' => '00000001',   // 8 digits, ASCII, zero-padded
+        'operator'         => '1',
+        'payment_type'     => '0',          // '0'=auto '1'=debit '2'=credit '3'=other
+        'receipt_text'     => 'PARCHEGGIO', // printed on the POS slip; max 128 chars
+        'connect_timeout'  => 5,            // seconds — TCP handshake
+        'read_timeout'     => 35,           // seconds — covers the card-tap window
     ],
 
     'app' => [
