@@ -194,26 +194,30 @@ if (($_GET['format'] ?? '') === 'json') {
     h1{font-size:22px}
   }
   @media print{
-    @page{size:80mm auto;margin:6mm}
-    body{background:#fff;color:#000;display:block;padding:0}
+    /* 80mm wide × 100mm tall (10cm). Aggressive sizing keeps the QR + PIN
+       + headers inside one slip — no second page, no scissor work. */
+    @page{size:80mm 100mm;margin:3mm}
+    body{background:#fff;color:#000;display:block;padding:0;margin:0}
     .ticket{
-      border:2px solid #000;border-radius:0;box-shadow:none;background:#fff;color:#000;
-      max-width:none;width:auto;padding:14px 14px 16px;
+      border:1px solid #000;border-radius:0;box-shadow:none;background:#fff;color:#000;
+      max-width:none;width:auto;padding:4mm 4mm 4mm;
     }
-    .brand,.noprint,.lang-switch{display:none}
-    h1{color:#000;font-size:22px}
-    .serial,.pin-label,.note{color:#000}
-    .row .k{color:#000}
-    .row .v{color:#000}
-    .row .fill,.sep{background-image:linear-gradient(90deg,#000 50%,transparent 0);opacity:.5}
-    .qr-wrap{box-shadow:none;padding:0;border-radius:0}
-    .qr-wrap img{width:55mm;height:55mm}
+    .brand,.noprint,.lang-switch,.note,.wa{display:none}
+    h1{color:#000;font-size:14px;margin:0 0 2mm}
+    .serial{color:#000;margin:0 0 2mm;font-size:9px}
+    .sep{margin:2mm -1mm;background-image:linear-gradient(90deg,#000 50%,transparent 0);opacity:.45}
+    .meta{gap:1.5mm;margin:0}
+    .row .k{color:#000;font-size:8px}
+    .row .v{color:#000;font-size:10px}
+    .row .fill{background-image:linear-gradient(90deg,#000 50%,transparent 0);opacity:.45}
+    .qr-wrap{box-shadow:none;padding:0;border-radius:0;margin:0}
+    .qr-wrap img{width:32mm;height:32mm}
+    .pin-label{color:#000;font-size:8px;margin-top:1.5mm}
     .pin{
       color:#000;-webkit-text-fill-color:#000;background:none;
-      font-size:40px;letter-spacing:8px;
-      border:2px solid #000;border-radius:0;padding:6px 10px;display:inline-block;
+      font-size:22px;letter-spacing:4px;margin:1mm 0;
+      border:1.5px solid #000;border-radius:0;padding:1mm 2mm;display:inline-block;
     }
-    .wa{background:none;color:#000;border:1px dashed #000;box-shadow:none}
   }
 </style>
 </head>

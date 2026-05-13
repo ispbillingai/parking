@@ -22,8 +22,11 @@ class Generator
                AND (expires_at IS NULL OR expires_at > NOW())
              LIMIT 1'
         );
+        // 100000–999999 guarantees a 6-digit PIN that never starts with 0,
+        // so the printed slip / QR / WhatsApp message never confuses people
+        // about whether leading zeros are part of the code.
         for ($i = 0; $i < 25; $i++) {
-            $pin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $pin = (string) random_int(100000, 999999);
             $session->execute([$pin]);
             if ($session->fetch()) continue;
             $sub->execute([$pin]);
