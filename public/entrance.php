@@ -195,12 +195,19 @@ if (($_GET['format'] ?? '') === 'json') {
   }
   @media print{
     /* 80mm wide × 100mm tall (10cm). Aggressive sizing keeps the QR + PIN
-       + headers inside one slip — no second page, no scissor work. */
+       + headers inside one slip — no second page, no scissor work.
+       The html/body resets (min-height:0, overflow:hidden, height:auto)
+       neutralise the screen layout's min-height:100vh so the browser
+       doesn't paginate trailing whitespace into a mini second slip. */
     @page{size:80mm 100mm;margin:3mm}
-    body{background:#fff;color:#000;display:block;padding:0;margin:0}
+    html,body{
+      background:#fff;color:#000;display:block;padding:0;margin:0;
+      width:auto;min-height:0;height:auto;max-height:100mm;overflow:hidden;
+    }
     .ticket{
       border:1px solid #000;border-radius:0;box-shadow:none;background:#fff;color:#000;
       max-width:none;width:auto;padding:4mm 4mm 4mm;
+      page-break-after:avoid;page-break-inside:avoid;break-inside:avoid;overflow:hidden;
     }
     .brand,.noprint,.lang-switch,.note,.wa{display:none}
     h1{color:#000;font-size:14px;margin:0 0 2mm}
