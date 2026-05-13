@@ -81,31 +81,38 @@ return [
         ],
     ],
 
-    // Ingenico iPP320 EFT-POS terminal — direct TCP, Italian "Protocollo
-    // 17" (ECR17). See Pos\Client docblock and the Nexi developer portal:
-    //   https://developer.nexigroup.com/traditionalpos/en-EU/docs/
+    // EFT-POS via RTS Web DoReMi POS 2.0 middleware
+    // (http://www.rtseng.it/) — a Windows service that wraps Italian
+    // "Protocollo 17" (ECR17) and exposes a simple HTTP API to the LAN.
     //
-    // Reachability: install Tailscale on a LAN machine with
-    //   tailscale up --advertise-routes=192.164.1.0/24 --accept-routes
-    // and on the VPS with --accept-routes. Approve the subnet route in
-    // https://login.tailscale.com/admin/machines. The VPS then reaches
-    // 192.164.1.26 by its real LAN IP. Verify with:
-    //   nc -vz 192.164.1.26 5040
+    //   PHP on VPS ──HTTPS──► Tailscale ──HTTP──► RTS service on LAN PC
+    //                                              └─Protocollo 17──► Move/3500
     //
-    // terminal_id / cash_register_id are 8-digit ASCII identifiers
-    // pre-programmed into the terminal during installation — get them
-    // from the cashier company. Wrong values are rejected silently
-    // (terminal sees the request but won't process it).
+    // Setup steps on the LAN host:
+    //   1. Install RTS Web DoReMi POS 2.0 (WebDoremiposSetup.msi)
+    //   2. Edit C:\Program Files (x86)\Rtseng\WebDoremipos\WebDoremipos.exe.config
+    //      and add a <terminal> entry under <terminals>:
+    //        <terminal name="Ingenico-93740816" Mode="Tcp"
+    //                  TerminalAddress="192.164.1.26"
+    //                  TerminalPort="5040"
+    //                  Password="<RTS-activation-key>" />
+    //      (Without the activation password, RTS clamps every amount to 2
+    //      cents — fine for testing, not for production.)
+    //   3. Change BaseAddress to bind to the LAN IP, e.g.
+    //      http://192.164.1.21:80/WebDoremiposWS/ — and open Windows
+    //      Firewall TCP 80 inbound.
+    //   4. net stop WebDoremipos && net start WebDoremipos
+    //   5. Verify locally: http://127.0.0.1/WebDoremiposWS/api/Status
+    //      should return "Operative".
+    //
+    // base_url is what the VPS hits (via Tailscale-routed LAN IP).
+    // terminal_name matches the name= attribute in the RTS XML config.
     'pos' => [
-        'host'             => '192.164.1.26',
-        'port'             => 5040,
-        'terminal_id'      => '00000001',   // 8 digits, ASCII, zero-padded
-        'cash_register_id' => '00000001',   // 8 digits, ASCII, zero-padded
-        'operator'         => '1',
-        'payment_type'     => '0',          // '0'=auto '1'=debit '2'=credit '3'=other
-        'receipt_text'     => 'PARCHEGGIO', // printed on the POS slip; max 128 chars
-        'connect_timeout'  => 5,            // seconds — TCP handshake
-        'read_timeout'     => 35,           // seconds — covers the card-tap window
+        'base_url'        => 'http://192.164.1.21/WebDoremiposWS',
+        'terminal_name'   => 'Ingenico-93740816',
+        'protocol_type'   => '0',     // '0'=auto / '1'=credit / '2'=debit
+        'connect_timeout' => 5,       // seconds — cURL connect
+        'read_timeout'    => 90,      // seconds — covers card-tap + acquirer auth
     ],
 
     'app' => [
