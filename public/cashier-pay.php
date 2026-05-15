@@ -304,7 +304,7 @@ function renderAlreadyPaid(data) {
 
 function resetToStart() {
   if (autoResetHandle) { clearInterval(autoResetHandle); autoResetHandle = null; }
-  if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+  if (pollHandle) { clearTimeout(pollHandle); pollHandle = null; }
   finishing = false;
   session = null;
   $('pin').value = '';
@@ -365,7 +365,9 @@ $('pay').onclick = async () => {
     $('opstatus').textContent = CFG.i18n.waiting;
     show('s3');
 
-    pollHandle = setInterval(pollActive, 300);
+    // Kick off the poll loop. pollActive() re-schedules itself so only
+    // ONE request is ever in flight — see pollActive().
+    pollHandle = setTimeout(pollActive, 600);
   } catch (e) {
     alert(e.message);
   }
@@ -399,19 +401,26 @@ $('payCard').onclick = async () => {
 
 async function pollActive() {
   if (finishing) return;
+  let keepPolling = false;
   try {
     const r = await post('api/cashmatic-poll.php');
-    if (!r.ok) { $('opstatus').textContent = r.error || ''; return; }
+    if (!r.ok) {
+      $('opstatus').textContent = r.error || '';
+      keepPolling = true;            // transient error — keep trying
+      return;
+    }
     $('req').textContent  = fmt(r.requested);
     $('ins').textContent  = fmt(r.inserted);
     $('disp').textContent = fmt(r.dispensed);
     $('nd').textContent   = fmt(r.notDispensed);
 
-    if (r.operation !== 'idle') return;
-    if (finishing) return;
-    finishing = true;
-    clearInterval(pollHandle); pollHandle = null;
+    if (r.operation !== 'idle') {
+      keepPolling = true;            // payment still in progress
+      return;
+    }
 
+    // Transaction finished on the machine — finalise it.
+    finishing = true;
     const finish = await post('api/cashmatic-finish.php', {
       pin: session.pin,
       amount_cents: session.amount_cents,
@@ -426,12 +435,21 @@ async function pollActive() {
     startAutoReset(CFG.auto_reset_seconds);
   } catch (e) {
     $('opstatus').textContent = e.message;
+    keepPolling = true;              // network hiccup — keep trying
+  } finally {
+    // Schedule the NEXT poll only after this one has fully completed, so
+    // there is never more than one request in flight. setInterval with a
+    // multi-second request (slow Tailscale link) piles up a backlog and
+    // stalls the whole flow — that caused the ~2-minute completion lag.
+    if (keepPolling && !finishing) {
+      pollHandle = setTimeout(pollActive, 300);
+    }
   }
 }
 
 $('cancel').onclick = async () => {
   try { await post('api/cashmatic-cancel.php'); } catch (e) {}
-  if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+  if (pollHandle) { clearTimeout(pollHandle); pollHandle = null; }
   show('s2');
 };
 
