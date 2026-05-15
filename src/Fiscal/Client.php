@@ -291,11 +291,12 @@ final class Client
             ]);
             return ['ok' => false, 'error' => 'invalid_xml', 'raw' => substr($raw, 0, 500)];
         }
-        $ns = $doc->getNamespaces(true);
-        $body = $ns['s'] ?? null
-            ? $doc->children($ns['s'])->Body
-            : $doc->Body;
-        $response = $body->response ?? null;
+        // The SOAP envelope prefix varies by printer firmware — "s:",
+        // "soapenv:", "soap:" etc. Locate the <response> element by its
+        // local name via XPath so parsing works regardless of the prefix
+        // (this printer replies with "soapenv:", the dev-guide uses "s:").
+        $found    = $doc->xpath('//*[local-name()="response"]');
+        $response = $found[0] ?? null;
         if (!$response) {
             Log::error('no_response_node', [
                 'error'       => 'no_response_node',

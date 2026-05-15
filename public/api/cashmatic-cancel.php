@@ -10,9 +10,15 @@ header('Content-Type: application/json');
 
 $client = new SessionClient($cfg['cashmatic']);
 $r = $client->cancelPayment();
+
+error_log('[cashmatic-cancel] CancelPayment RAW: '
+    . json_encode($r, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
 $client->clearTransaction();
 
 if (($r['code'] ?? -1) !== 0) {
+    error_log('[cashmatic-cancel] FAILED code=' . ($r['code'] ?? -1)
+        . ' message=' . ($r['message'] ?? '?'));
     echo json_encode([
         'ok'    => false,
         'error' => $r['message'] ?? 'CancelPayment failed',
@@ -20,4 +26,5 @@ if (($r['code'] ?? -1) !== 0) {
     exit;
 }
 
+error_log('[cashmatic-cancel] OK cancelled');
 echo json_encode(['ok' => true]);

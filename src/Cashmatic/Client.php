@@ -108,8 +108,11 @@ class Client
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_SSL_VERIFYPEER => !empty($this->cfg['verify_ssl']),
             CURLOPT_SSL_VERIFYHOST => !empty($this->cfg['verify_ssl']) ? 2 : 0,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT        => 10,
+            // The Cashmatic is reached over a slow Tailscale link: TCP
+            // connects in ~2s and the TLS handshake adds several more.
+            // Generous timeouts stop killing calls that would succeed.
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT        => 25,
             CURLOPT_POSTFIELDS     => $body === null ? '' : json_encode($body, JSON_UNESCAPED_SLASHES),
         ]);
 
