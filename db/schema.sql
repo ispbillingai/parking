@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS gate_events (
         'subscription_exit',
         'subscription_payment',
         'daily_ticket_sold',
+        'barrier',
         'admin_login',
         'admin_logout',
         'admin_action'
@@ -177,3 +178,19 @@ CREATE TABLE IF NOT EXISTS gate_events (
     CONSTRAINT fk_event_sub FOREIGN KEY (subscription_id)
         REFERENCES subscriptions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Physical gate barriers controlled from the admin panel. One row per
+-- barrier; `status` is kept fresh by bin/mqtt-listener.php, which watches
+-- the relay PCB's input1 topic (HIGH = open, LOW = closed).
+CREATE TABLE IF NOT EXISTS barriers (
+    code VARCHAR(20) NOT NULL PRIMARY KEY,        -- 'entrance' | 'exit'
+    name VARCHAR(60) NOT NULL,
+    status ENUM('open','closed','unknown') NOT NULL DEFAULT 'unknown',
+    status_at DATETIME NULL,                      -- when status last changed
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO barriers (code, name) VALUES
+    ('entrance', 'Entrance barrier'),
+    ('exit',     'Exit barrier')
+ON DUPLICATE KEY UPDATE code = code;

@@ -91,4 +91,37 @@ $client->subscribe($scanTopic, function (string $topic, string $message) use ($p
     }
 }, 1);
 
+// --- Barrier open/closed status ------------------------------------------
+// The relay PCBs publish their input1 state (HIGH = open, LOW = closed) to
+// the configured status topics. Mirror that into the barriers table so the
+// admin Barriers page can show live open/closed status.
+$barrierStatusTopics = [
+    'entrance' => $mqttCfg['topics']['entrance_status'] ?? '',
+    'exit'     => $mqttCfg['topics']['exit_status'] ?? '',
+];
+
+$updateBarrier = $pdo->prepare(
+    'UPDATE barriers SET status = ?, status_at = ? WHERE code = ?'
+);
+
+foreach ($barrierStatusTopics as $code => $statusTopic) {
+    if ($statusTopic === '') {
+        continue;
+    }
+    $client->subscribe($statusTopic, function (string $topic, string $message) use ($updateBarrier, $code) {
+        if (!preg_match('/"status"\s*:\s*"(HIGH|LOW)"/i', $message, $m)) {
+            echo "[skip] {$code} status: {$message}\n";
+            return;
+        }
+        $status = strtoupper($m[1]) === 'HIGH' ? 'open' : 'closed';
+        try {
+            $updateBarrier->execute([$status, date('Y-m-d H:i:s'), $code]);
+            echo "[barrier] {$code} -> {$status}\n";
+        } catch (Throwable $e) {
+            fwrite(STDERR, "[error] barrier {$code}: {$e->getMessage()}\n");
+        }
+    }, 1);
+    echo "[mqtt-listener] subscribed to {$statusTopic} ({$code} status)\n";
+}
+
 $client->loop(true);

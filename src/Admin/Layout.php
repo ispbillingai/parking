@@ -14,6 +14,7 @@ final class Layout
     /** @var string[] */
     private const NAV = [
         'dashboard'     => ['index.php',         'nav_dashboard',     '&#x1F4CA;'],
+        'barriers'      => ['barriers.php',      'nav_barriers',      '&#x1F6A7;'],
         'sessions'      => ['sessions.php',      'nav_sessions',      '&#x1F39F;'],
         'events'        => ['events.php',        'nav_events',        '&#x1F4DC;'],
         'customers'     => ['customers.php',     'nav_customers',     '&#x1F465;'],

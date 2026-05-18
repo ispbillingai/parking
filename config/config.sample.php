@@ -34,6 +34,20 @@ return [
             'relay_open' => 'parking/gate/relay',   // publish to open the gate
             'scan'       => 'parking/gate/scan',    // gate reader publishes PINs here
             'pin_add'    => '',                     // optional paid-PIN cache
+
+            // --- Barrier control (admin Barriers page) -----------------
+            // Replace relayXXXXX with the real relay-PCB device id.
+            // *_control  : publish the OPEN / signal commands here.
+            // *_status   : the PCB publishes input1 HIGH/LOW state here;
+            //              bin/mqtt-listener.php watches these to keep the
+            //              barriers table's open/closed status current.
+            'exit_control'      => '/parchuscita/relayXXXXX/in/control',
+            'exit_status'       => '/parchuscita/relayXXXXX/out/input1',
+            'entrance_control'  => '/parchingresso/relayXXXXX/in/control',
+            'entrance_status'   => '/parking/relayXXXXX/out/input1',
+            // Auxiliary signals (Free/Full light + entrance lock) live on
+            // the entrance PCB; leave empty to reuse entrance_control.
+            'signals_control'   => '',
         ],
         'relay_payload' => '1',
     ],

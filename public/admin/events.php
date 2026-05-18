@@ -21,7 +21,8 @@ $validTypes = [
     'entry','scan_at_pay','payment_start','payment_ok','payment_fail',
     'scan_at_exit','gate_open','denied','whatsapp_sent','whatsapp_fail',
     'email_sent','email_fail','subscription_entry','subscription_exit',
-    'subscription_payment','admin_login','admin_logout','admin_action',
+    'subscription_payment','daily_ticket_sold','barrier',
+    'admin_login','admin_logout','admin_action',
 ];
 
 $where = []; $args = [];

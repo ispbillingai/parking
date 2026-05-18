@@ -174,10 +174,28 @@ $pdo->exec(
     'entry','scan_at_pay','payment_start','payment_ok','payment_fail',
     'scan_at_exit','gate_open','denied','whatsapp_sent','whatsapp_fail',
     'email_sent','email_fail','subscription_entry','subscription_exit',
-    'subscription_payment','daily_ticket_sold',
+    'subscription_payment','daily_ticket_sold','barrier',
     'admin_login','admin_logout','admin_action'
 ) NOT NULL");
 step('   widened event_type ENUM');
+
+step('-- creating barriers table');
+
+$pdo->exec(
+"CREATE TABLE IF NOT EXISTS barriers (
+    code VARCHAR(20) NOT NULL PRIMARY KEY,
+    name VARCHAR(60) NOT NULL,
+    status ENUM('open','closed','unknown') NOT NULL DEFAULT 'unknown',
+    status_at DATETIME NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$pdo->exec(
+"INSERT INTO barriers (code, name) VALUES
+    ('entrance', 'Entrance barrier'),
+    ('exit',     'Exit barrier')
+ ON DUPLICATE KEY UPDATE code = code");
+step('   seeded entrance + exit barriers');
 
 step('-- creating settings + notification_templates');
 
