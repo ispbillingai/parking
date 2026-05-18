@@ -1,0 +1,21 @@
+[Unit]
+# Keeps bin/mqtt-listener.php running: validates scanned PINs, opens the
+# gate relay, discovers each barrier card's control topic, and mirrors the
+# barriers' open/closed status into the database.
+Description=Parking MQTT listener
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html
+ExecStart=/usr/bin/php /var/www/html/bin/mqtt-listener.php
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
