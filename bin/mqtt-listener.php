@@ -9,6 +9,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 $cfg = require __DIR__ . '/../config/config.php';
 
+use Parking\Admin\Settings;
 use Parking\Db;
 use Parking\Gate\MqttPublisher;
 use PhpMqtt\Client\ConnectionSettings;
@@ -91,37 +92,64 @@ $client->subscribe($scanTopic, function (string $topic, string $message) use ($p
     }
 }, 1);
 
-// --- Barrier open/closed status ------------------------------------------
-// The relay PCBs publish their input1 state (HIGH = open, LOW = closed) to
-// the configured status topics. Mirror that into the barriers table so the
-// admin Barriers page can show live open/closed status.
-$barrierStatusTopics = [
-    'entrance' => $mqttCfg['topics']['entrance_status'] ?? '',
-    'exit'     => $mqttCfg['topics']['exit_status'] ?? '',
+// --- Barrier cards: topic discovery + open/closed status -----------------
+// Each relay card publishes under an MFR prefix (parkingOUT / parkingIN /
+// parkingSemaforo). Two jobs per card:
+//   1. Discover its control topic. The card's own device-id segment is not
+//      known up front, so we watch any "<base>/out/<leaf>" topic it emits
+//      and derive "<base>/in/control", which we store as a setting so the
+//      admin Barriers page can publish OPEN / signal commands to it.
+//   2. For the entrance & exit cards, mirror input1 (HIGH = open,
+//      LOW = closed) into the barriers table for the live status display.
+$cardPrefixes = [
+    'exit'     => $mqttCfg['topics']['exit_prefix']     ?? '',
+    'entrance' => $mqttCfg['topics']['entrance_prefix'] ?? '',
+    'semaforo' => $mqttCfg['topics']['semaforo_prefix'] ?? '',
 ];
 
 $updateBarrier = $pdo->prepare(
     'UPDATE barriers SET status = ?, status_at = ? WHERE code = ?'
 );
 
-foreach ($barrierStatusTopics as $code => $statusTopic) {
-    if ($statusTopic === '') {
+// Remember the last control topic stored per card so we only hit the DB
+// when the discovered value actually changes.
+$resolvedControl = [];
+
+foreach ($cardPrefixes as $code => $prefix) {
+    if ($prefix === '') {
         continue;
     }
-    $client->subscribe($statusTopic, function (string $topic, string $message) use ($updateBarrier, $code) {
-        if (!preg_match('/"status"\s*:\s*"(HIGH|LOW)"/i', $message, $m)) {
-            echo "[skip] {$code} status: {$message}\n";
-            return;
-        }
-        $status = strtoupper($m[1]) === 'HIGH' ? 'open' : 'closed';
-        try {
-            $updateBarrier->execute([$status, date('Y-m-d H:i:s'), $code]);
-            echo "[barrier] {$code} -> {$status}\n";
-        } catch (Throwable $e) {
-            fwrite(STDERR, "[error] barrier {$code}: {$e->getMessage()}\n");
-        }
-    }, 1);
-    echo "[mqtt-listener] subscribed to {$statusTopic} ({$code} status)\n";
+    $client->subscribe(
+        rtrim($prefix, '/') . '/#',
+        function (string $topic, string $message) use ($pdo, $updateBarrier, &$resolvedControl, $code) {
+            // 1. Discover the control topic from any "<base>/out/<leaf>" topic.
+            if (preg_match('#^(.+)/out/[^/]+$#', $topic, $m)) {
+                $control = $m[1] . '/in/control';
+                if (($resolvedControl[$code] ?? null) !== $control) {
+                    $resolvedControl[$code] = $control;
+                    Settings::set($pdo, "mqtt.topics.{$code}_control", $control);
+                    echo "[discover] {$code} control -> {$control}\n";
+                }
+            }
+
+            // 2. Mirror input1 HIGH/LOW into the barriers table.
+            if (($code === 'entrance' || $code === 'exit') && str_ends_with($topic, '/out/input1')) {
+                if (!preg_match('/"status"\s*:\s*"(HIGH|LOW)"/i', $message, $s)) {
+                    echo "[skip] {$code} status: {$message}\n";
+                    return;
+                }
+                $status = strtoupper($s[1]) === 'HIGH' ? 'open' : 'closed';
+                try {
+                    $updateBarrier->execute([$status, date('Y-m-d H:i:s'), $code]);
+                    echo "[barrier] {$code} -> {$status}\n";
+                } catch (Throwable $e) {
+                    fwrite(STDERR, "[error] barrier {$code}: {$e->getMessage()}\n");
+                }
+            }
+        },
+        1
+    );
+    echo "[mqtt-listener] subscribed to {$prefix}/# ({$code} card)\n";
 }
 
 $client->loop(true);

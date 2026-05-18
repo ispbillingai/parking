@@ -22,12 +22,14 @@ return [
         'verify_ssl' => false,             // true once you trust the kiosk cert
     ],
 
-    // MQTT broker that drives the gate relay and carries scan events.
+    // MQTT broker that drives the gate relays and carries scan events.
+    // All three relay cards (parkingOUT / parkingIN / parkingSemaforo)
+    // connect to this same broker.
     'mqtt' => [
         'host'      => '127.0.0.1',
         'port'      => 1883,
         'username'  => null,
-        'password'  => null,
+        'password'  => null,                    // must match the relay cards' Broker Password
         'client_id' => 'parking-php',
         'use_tls'   => false,
         'topics' => [
@@ -36,18 +38,19 @@ return [
             'pin_add'    => '',                     // optional paid-PIN cache
 
             // --- Barrier control (admin Barriers page) -----------------
-            // Replace relayXXXXX with the real relay-PCB device id.
-            // *_control  : publish the OPEN / signal commands here.
-            // *_status   : the PCB publishes input1 HIGH/LOW state here;
-            //              bin/mqtt-listener.php watches these to keep the
-            //              barriers table's open/closed status current.
-            'exit_control'      => '/parchuscita/relayXXXXX/in/control',
-            'exit_status'       => '/parchuscita/relayXXXXX/out/input1',
-            'entrance_control'  => '/parchingresso/relayXXXXX/in/control',
-            'entrance_status'   => '/parking/relayXXXXX/out/input1',
-            // Auxiliary signals (Free/Full light + entrance lock) live on
-            // the entrance PCB; leave empty to reuse entrance_control.
-            'signals_control'   => '',
+            // Each relay card carries an MFR prefix set in its web UI;
+            // "Head slash" is enabled so topics start with "/". The
+            // relayXXXXX device-id segment is auto-discovered by
+            // bin/mqtt-listener.php, which watches each card's traffic and
+            // stores the resolved *_control topics as settings. You only
+            // set the three prefixes below.
+            'exit_prefix'      => '/parkingOUT',        // exit barrier card (+ Wiegand reader)
+            'entrance_prefix'  => '/parkingIN',         // entrance barrier card
+            'semaforo_prefix'  => '/parkingSemaforo',   // Free/Full traffic-light card
+            // Resolved control topics — leave blank; the listener fills them.
+            'exit_control'     => '',
+            'entrance_control' => '',
+            'semaforo_control' => '',
         ],
         'relay_payload' => '1',
     ],
