@@ -185,3 +185,13 @@ INSERT INTO barriers (code, name) VALUES
     ('entrance', 'Entrance barrier'),
     ('exit',     'Exit barrier')
 ON DUPLICATE KEY UPDATE code = code;
+
+-- Wiegand tags seen at a gate reader with no matching subscription.
+CREATE TABLE IF NOT EXISTS unregistered_tags (
+    tag_code VARCHAR(40) NOT NULL PRIMARY KEY,
+    last_gate VARCHAR(20) NULL,
+    scan_count INT UNSIGNED NOT NULL DEFAULT 0,
+    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -197,6 +197,18 @@ $pdo->exec(
  ON DUPLICATE KEY UPDATE code = code");
 step('   seeded entrance + exit barriers');
 
+step('-- creating unregistered_tags table');
+
+$pdo->exec(
+"CREATE TABLE IF NOT EXISTS unregistered_tags (
+    tag_code VARCHAR(40) NOT NULL PRIMARY KEY,
+    last_gate VARCHAR(20) NULL,
+    scan_count INT UNSIGNED NOT NULL DEFAULT 0,
+    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 step('-- creating settings + notification_templates');
 
 $pdo->exec(

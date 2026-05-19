@@ -158,7 +158,7 @@ $csrf = Auth::csrfToken();
         </select>
       </label>
       <label><?= htmlspecialchars(I18n::t('sub_key')) ?>
-        <input name="key_code" value="<?= htmlspecialchars($editing['key_code'] ?? '') ?>" placeholder="<?= htmlspecialchars(I18n::t('sub_key_ph')) ?>">
+        <input name="key_code" value="<?= htmlspecialchars($editing['key_code'] ?? (string) ($_GET['key'] ?? '')) ?>" placeholder="<?= htmlspecialchars(I18n::t('sub_key_ph')) ?>">
       </label>
       <label class="full"><?= htmlspecialchars(I18n::t('cust_notes')) ?>
         <textarea name="notes"><?= htmlspecialchars($editing['notes'] ?? '') ?></textarea>

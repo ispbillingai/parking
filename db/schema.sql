@@ -194,3 +194,16 @@ INSERT INTO barriers (code, name) VALUES
     ('entrance', 'Entrance barrier'),
     ('exit',     'Exit barrier')
 ON DUPLICATE KEY UPDATE code = code;
+
+-- Wiegand tags seen at a gate reader that do NOT match any subscription
+-- key_code. bin/mqtt-listener.php records them here so an admin can review
+-- and assign each to a customer/subscription (admin Tags page). A tag is
+-- removed from this table once it is granted access via a subscription.
+CREATE TABLE IF NOT EXISTS unregistered_tags (
+    tag_code VARCHAR(40) NOT NULL PRIMARY KEY,
+    last_gate VARCHAR(20) NULL,                   -- 'entrance' | 'exit'
+    scan_count INT UNSIGNED NOT NULL DEFAULT 0,
+    first_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

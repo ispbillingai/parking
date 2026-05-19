@@ -12,6 +12,7 @@ $cfg = require __DIR__ . '/../config/config.php';
 use Parking\Admin\Settings;
 use Parking\Db;
 use Parking\Gate\MqttPublisher;
+use Parking\Subscription\AccessControl;
 use PhpMqtt\Client\ConnectionSettings;
 use PhpMqtt\Client\MqttClient;
 
@@ -92,6 +93,61 @@ $client->subscribe($scanTopic, function (string $topic, string $message) use ($p
     }
 }, 1);
 
+/**
+ * A Wiegand tag was swiped at the $gate ('entrance'|'exit') reader. Open
+ * the barrier when the tag matches a valid subscription; otherwise record
+ * an unknown tag for admin onboarding, or log the denial reason.
+ */
+function handleTagScan(PDO $pdo, array $cfg, string $gate, string $rawTag, PDOStatement $upsertTag): void
+{
+    $check = AccessControl::check($pdo, $cfg, $rawTag);
+    $tag   = $check['key'];
+    if ($tag === '') {
+        echo "[tag] {$gate}: empty tag, ignored\n";
+        return;
+    }
+
+    // Unknown tag — store it so an admin can assign it to a customer.
+    if ($check['reason'] === 'unknown_key') {
+        $upsertTag->execute([$tag, $gate]);
+        Db::logEvent($pdo, null, null, 'denied', [
+            'reason' => 'unregistered_tag', 'tag' => $tag, 'gate' => $gate,
+        ]);
+        echo "[tag] {$gate}: unknown {$tag} -> recorded for onboarding\n";
+        return;
+    }
+
+    $sub = $check['sub'];
+
+    // Known tag but not allowed in (inactive / expired / overdue).
+    if (!$check['ok']) {
+        Db::logEvent($pdo, null, null, 'denied', [
+            'reason' => $check['reason'], 'tag' => $tag, 'gate' => $gate,
+            'overdue_cents' => $check['overdue'],
+        ], (int) $sub['id']);
+        echo "[tag] {$gate}: denied {$tag} ({$check['reason']})\n";
+        return;
+    }
+
+    // Valid subscription — open the barrier. A tag that was previously
+    // unknown is now assigned, so drop it from the onboarding list.
+    $pdo->prepare('DELETE FROM unregistered_tags WHERE tag_code = ?')->execute([$tag]);
+    $eventType = $gate === 'exit' ? 'subscription_exit' : 'subscription_entry';
+    Db::logEvent($pdo, null, null, $eventType, [
+        'tag' => $tag, 'gate' => $gate, 'customer' => $sub['full_name'],
+    ], (int) $sub['id']);
+    try {
+        (new MqttPublisher($cfg['mqtt']))->openBarrier($gate);
+        Db::logEvent($pdo, null, null, 'gate_open', ['tag' => $tag, 'gate' => $gate], (int) $sub['id']);
+        echo "[tag] {$gate}: OPEN for {$sub['full_name']} ({$tag})\n";
+    } catch (Throwable $e) {
+        Db::logEvent($pdo, null, null, 'denied', [
+            'reason' => 'mqtt_error', 'tag' => $tag, 'gate' => $gate, 'err' => $e->getMessage(),
+        ], (int) $sub['id']);
+        fwrite(STDERR, "[error] tag open {$gate}: {$e->getMessage()}\n");
+    }
+}
+
 // --- Barrier cards: topic discovery + open/closed status -----------------
 // Each relay card publishes under an MFR prefix (parkingOUT / parkingIN /
 // parkingSemaforo). Two jobs per card:
@@ -111,6 +167,16 @@ $updateBarrier = $pdo->prepare(
     'UPDATE barriers SET status = ?, status_at = ? WHERE code = ?'
 );
 
+// Upsert for Wiegand tags seen at a reader that match no subscription.
+$upsertTag = $pdo->prepare(
+    'INSERT INTO unregistered_tags (tag_code, last_gate, scan_count, last_seen_at)
+     VALUES (?, ?, 1, NOW())
+     ON DUPLICATE KEY UPDATE
+         last_gate    = VALUES(last_gate),
+         scan_count   = scan_count + 1,
+         last_seen_at = NOW()'
+);
+
 // Remember the last control topic stored per card so we only hit the DB
 // when the discovered value actually changes.
 $resolvedControl = [];
@@ -121,7 +187,19 @@ foreach ($cardPrefixes as $code => $prefix) {
     }
     $client->subscribe(
         rtrim($prefix, '/') . '/#',
-        function (string $topic, string $message) use ($pdo, $updateBarrier, &$resolvedControl, $code) {
+        function (string $topic, string $message, bool $retained = false) use ($pdo, $cfg, $updateBarrier, $upsertTag, &$resolvedControl, $code) {
+            // 0. Wiegand tag swiped at the entrance/exit reader. tag_wg1 is
+            //    published retained, so the broker replays the last swipe on
+            //    every (re)connect — skip retained or the gate opens on boot.
+            if (($code === 'entrance' || $code === 'exit') && str_ends_with($topic, '/out/tag_wg1')) {
+                if ($retained) {
+                    echo "[skip] retained tag on {$code}: {$message}\n";
+                    return;
+                }
+                handleTagScan($pdo, $cfg, $code, $message, $upsertTag);
+                return;
+            }
+
             // 1. Discover the control topic from any "<base>/out/<leaf>" topic.
             if (preg_match('#^(.+)/out/[^/]+$#', $topic, $m)) {
                 $control = $m[1] . '/in/control';

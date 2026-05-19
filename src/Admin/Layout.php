@@ -19,6 +19,7 @@ final class Layout
         'events'        => ['events.php',        'nav_events',        '&#x1F4DC;'],
         'customers'     => ['customers.php',     'nav_customers',     '&#x1F465;'],
         'subscriptions' => ['subscriptions.php', 'nav_subscriptions', '&#x1F511;'],
+        'tags'          => ['tags.php',          'nav_tags',          '&#x1FAAA;'],
         'plans'         => ['plans.php',         'nav_plans',         '&#x1F3F7;'],
         'payments'      => ['payments.php',      'nav_payments',      '&#x1F4B6;'],
         'notifications' => ['notifications.php', 'nav_notifications', '&#x1F4E8;'],

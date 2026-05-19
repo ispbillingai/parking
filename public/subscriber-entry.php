@@ -7,7 +7,7 @@ $cfg = require __DIR__ . '/../config/config.php';
 use Parking\Db;
 use Parking\Gate\MqttPublisher;
 use Parking\I18n;
-use Parking\Subscription\Scheduler;
+use Parking\Subscription\AccessControl;
 
 $lang = I18n::init($cfg['app']['default_lang'] ?? null);
 $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
@@ -16,72 +16,42 @@ $pdo = Db::pdo($cfg['db']);
 $result = null;
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' || isset($_GET['key'])) {
-    $keyCode = strtoupper(preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($_POST['key'] ?? $_GET['key'] ?? ''))));
+    // Same access rule as the Wiegand tag reader (see AccessControl).
+    $check   = AccessControl::check($pdo, $cfg, (string) ($_POST['key'] ?? $_GET['key'] ?? ''));
+    $keyCode = $check['key'];
+    $sub     = $check['sub'];
 
-    if ($keyCode === '') {
+    if ($check['reason'] === 'empty_key') {
         $result = ['ok' => false, 'reason' => 'empty_key'];
+    } elseif ($check['reason'] === 'unknown_key') {
+        Db::logEvent($pdo, null, null, 'denied', ['reason' => 'subscription not found', 'key' => $keyCode]);
+        $result = ['ok' => false, 'reason' => 'unknown_key'];
+    } elseif (!$check['ok']) {
+        Db::logEvent($pdo, null, null, 'denied', [
+            'reason' => $check['reason'],
+            'key'    => $keyCode,
+            'overdue_cents' => $check['overdue'],
+        ], (int) $sub['id']);
+        $result = [
+            'ok'      => false,
+            'reason'  => $check['reason'],
+            'sub'     => $sub,
+            'overdue' => $check['overdue'],
+        ];
     } else {
-        $stmt = $pdo->prepare(
-            'SELECT s.*, c.full_name, c.plate, p.name AS plan_name, p.period
-             FROM subscriptions s
-             JOIN customers c ON c.id = s.customer_id
-             JOIN subscription_plans p ON p.id = s.plan_id
-             WHERE s.key_code = ? LIMIT 1'
-        );
-        $stmt->execute([$keyCode]);
-        $sub = $stmt->fetch();
-
-        if (!$sub) {
-            Db::logEvent($pdo, null, null, 'denied', ['reason' => 'subscription not found', 'key' => $keyCode]);
-            $result = ['ok' => false, 'reason' => 'unknown_key'];
-        } else {
-            $today = date('Y-m-d');
-            $reason = null;
-            if ($sub['status'] !== 'active') $reason = 'inactive';
-            // Daily tickets carry a precise expires_at (rolling 24h) and ignore
-            // the calendar-day ends_on; all other plans use the DATE column.
-            elseif (!empty($sub['expires_at'])) {
-                if (strtotime((string) $sub['expires_at']) <= time()) $reason = 'expired';
-            } elseif ($sub['ends_on'] < $today) {
-                $reason = 'expired';
-            }
-
-            // Daily passes are paid upfront in full — no installment schedule
-            // to chase, so skip the overdue check for them.
-            $overdue = ($sub['period'] === 'daily')
-                ? 0
-                : Scheduler::overdueCents($pdo, (int) $sub['id']);
-            $blockOverdue = (int) ($cfg['app']['subscription_block_overdue'] ?? 1);
-            if (!$reason && $blockOverdue && $overdue > 0) $reason = 'overdue';
-
-            if ($reason) {
-                Db::logEvent($pdo, null, null, 'denied', [
-                    'reason' => $reason,
-                    'key'    => $keyCode,
-                    'overdue_cents' => $overdue,
-                ], (int) $sub['id']);
-                $result = [
-                    'ok'      => false,
-                    'reason'  => $reason,
-                    'sub'     => $sub,
-                    'overdue' => $overdue,
-                ];
-            } else {
-                Db::logEvent($pdo, null, null, 'subscription_entry', [
-                    'key'      => $keyCode,
-                    'customer' => $sub['full_name'],
-                ], (int) $sub['id']);
-                try {
-                    (new MqttPublisher($cfg['mqtt']))->publishRelayOpen();
-                    Db::logEvent($pdo, null, null, 'gate_open', ['key' => $keyCode], (int) $sub['id']);
-                    $result = ['ok' => true, 'sub' => $sub];
-                } catch (Throwable $e) {
-                    Db::logEvent($pdo, null, null, 'denied', [
-                        'reason' => 'mqtt_error', 'err' => $e->getMessage(),
-                    ], (int) $sub['id']);
-                    $result = ['ok' => false, 'reason' => 'gate_error'];
-                }
-            }
+        Db::logEvent($pdo, null, null, 'subscription_entry', [
+            'key'      => $keyCode,
+            'customer' => $sub['full_name'],
+        ], (int) $sub['id']);
+        try {
+            (new MqttPublisher($cfg['mqtt']))->publishRelayOpen();
+            Db::logEvent($pdo, null, null, 'gate_open', ['key' => $keyCode], (int) $sub['id']);
+            $result = ['ok' => true, 'sub' => $sub];
+        } catch (Throwable $e) {
+            Db::logEvent($pdo, null, null, 'denied', [
+                'reason' => 'mqtt_error', 'err' => $e->getMessage(),
+            ], (int) $sub['id']);
+            $result = ['ok' => false, 'reason' => 'gate_error'];
         }
     }
 }
