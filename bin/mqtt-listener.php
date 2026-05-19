@@ -210,6 +210,24 @@ foreach ($cardPrefixes as $code => $prefix) {
                 }
             }
 
+            // 1b. Mirror relay states the Barriers page tracks, so it shows
+            //     the truth even when toggled outside the panel. The cards
+            //     publish each relay on "<base>/out/rN" as plain ON / OFF.
+            //       entrance relay 3 = barrier lock   (ON = locked)
+            //       semaforo relay 1 = Free/Full light (ON = Full / red)
+            if ($code === 'entrance' && str_ends_with($topic, '/out/r3')) {
+                $locked = strtoupper(trim($message)) === 'ON';
+                Settings::set($pdo, 'gate.entrance_lock', $locked ? 'locked' : 'unlocked');
+                echo "[lock] entrance -> " . ($locked ? 'locked' : 'unlocked') . "\n";
+                return;
+            }
+            if ($code === 'semaforo' && str_ends_with($topic, '/out/r1')) {
+                $full = strtoupper(trim($message)) === 'ON';
+                Settings::set($pdo, 'gate.traffic_light', $full ? 'full' : 'free');
+                echo "[traffic] -> " . ($full ? 'full' : 'free') . "\n";
+                return;
+            }
+
             // 2. Mirror input1 HIGH/LOW into the barriers table.
             if (($code === 'entrance' || $code === 'exit') && str_ends_with($topic, '/out/input1')) {
                 if (!preg_match('/"status"\s*:\s*"(HIGH|LOW)"/i', $message, $s)) {
