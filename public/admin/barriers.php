@@ -29,9 +29,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!in_array($barrier, ['entrance', 'exit'], true)) {
                 Layout::flash(I18n::t('flash_barrier_unknown'), 'err');
             } else {
-                $stmt = $pdo->prepare('SELECT name FROM barriers WHERE code = ?');
-                $stmt->execute([$barrier]);
-                $name = (string) ($stmt->fetchColumn() ?: $barrier);
+                $name = I18n::t('bar_name_' . $barrier);
 
                 $mqtt->openBarrier($barrier);
                 Db::logEvent($pdo, null, null, 'barrier', [
@@ -176,8 +174,12 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
 
 <div class="grid k2">
   <?php foreach ($barriers as $b):
-      $st  = (string) $b['status'];
-      $name = (string) $b['name'];
+      $st   = (string) $b['status'];
+      $code = (string) $b['code'];
+      // Prefer a translated name; fall back to the DB name for any
+      // barrier code without a bar_name_* string.
+      $name = I18n::t('bar_name_' . $code);
+      if ($name === 'bar_name_' . $code) $name = (string) $b['name'];
   ?>
   <div class="card barrier-card">
     <div class="barrier-head">

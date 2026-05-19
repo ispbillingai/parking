@@ -401,6 +401,8 @@ return [
     // Barriers control page
     'bar_title'          => 'Gate barriers',
     'bar_intro'          => 'Live status and manual control of the entrance and exit barriers. Every manual action is recorded in the events log.',
+    'bar_name_entrance'  => 'Entrance barrier',
+    'bar_name_exit'      => 'Exit barrier',
     'bar_status_open'    => 'Open',
     'bar_status_closed'  => 'Closed',
     'bar_status_unknown' => 'Unknown',

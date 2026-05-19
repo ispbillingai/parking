@@ -399,6 +399,8 @@ return [
     // Pagina controllo barriere
     'bar_title'          => 'Barriere del parcheggio',
     'bar_intro'          => 'Stato in tempo reale e controllo manuale delle barriere di ingresso e uscita. Ogni azione manuale viene registrata nel log eventi.',
+    'bar_name_entrance'  => 'Barriera di ingresso',
+    'bar_name_exit'      => 'Barriera di uscita',
     'bar_status_open'    => 'Aperta',
     'bar_status_closed'  => 'Chiusa',
     'bar_status_unknown' => 'Sconosciuto',
