@@ -123,18 +123,23 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
 .pill.warn{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:#fde68a}
 .pill.ok{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35);color:#a7f3d0}
 
-/* --- Barrier illustration: a boom arm that lifts when the gate is open --- */
-.bz{position:relative;width:100%;max-width:320px;margin:2px auto;height:130px;
+/* --- Barrier illustration: front-on view, boom lifts when the gate opens --- */
+.bz{position:relative;width:100%;max-width:340px;margin:2px auto;height:140px;
   border-radius:12px;overflow:hidden;border:1px solid var(--border);
-  background:linear-gradient(180deg,#0d1538 0%,#182253 72%)}
+  background:linear-gradient(180deg,#0d1538 0%,#10183f 55%,#0b1130 100%)}
 .bz.open{box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
 .bz.closed{box-shadow:inset 0 0 0 1px rgba(248,113,113,.30)}
-.bz-road{position:absolute;left:0;right:0;bottom:0;height:30px;
-  background:#212b52;border-top:2px solid rgba(255,255,255,.06)}
-.bz-road::before{content:"";position:absolute;left:0;right:0;top:14px;height:3px;
-  background:repeating-linear-gradient(90deg,#f4c542 0 16px,transparent 16px 34px);opacity:.55}
-.bz-car{position:absolute;bottom:23px;left:158px;width:46px;height:40px;z-index:1;
-  filter:drop-shadow(0 4px 5px rgba(0,0,0,.5))}
+/* the road recedes from the viewer — a perspective trapezoid... */
+.bz-road{position:absolute;left:0;right:0;bottom:0;height:104px;
+  background:linear-gradient(180deg,#2a3360,#1b2446);
+  clip-path:polygon(38% 0,62% 0,100% 100%,0 100%)}
+/* ...with a vertical centre lane line going away from the viewer. */
+.bz-lane{position:absolute;left:50%;bottom:0;width:54px;height:104px;
+  transform:translateX(-50%);
+  clip-path:polygon(44% 0,56% 0,70% 100%,30% 100%);
+  background:repeating-linear-gradient(0deg,#f4c542 0 15px,transparent 15px 34px);opacity:.7}
+.bz-car{position:absolute;bottom:24px;left:50%;margin-left:-23px;width:46px;height:40px;z-index:2;
+  filter:drop-shadow(0 5px 5px rgba(0,0,0,.5))}
 .bz-car span{position:absolute}
 .bz-car .cw{bottom:0;width:11px;height:11px;border-radius:50%;
   background:radial-gradient(circle at 40% 40%,#3a3f4d,#0d1018)}
@@ -151,19 +156,20 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
   background:#ffe487;box-shadow:0 0 7px #ffd24d}
 .bz-car .clight.l{left:4px}
 .bz-car .clight.r{right:4px}
-.bz-base{position:absolute;left:30px;bottom:25px;width:26px;height:9px;border-radius:3px;
-  background:linear-gradient(180deg,#454f78,#2a3252)}
-.bz-post{position:absolute;left:38px;bottom:30px;width:10px;height:32px;border-radius:2px;
-  background:linear-gradient(90deg,#8893b7,#cdd5ec 45%,#5c668c)}
-.bz-pivot{position:absolute;left:36px;bottom:54px;width:14px;height:14px;border-radius:50%;z-index:3;
+.bz-base{position:absolute;left:13px;bottom:32px;width:30px;height:10px;border-radius:3px;
+  background:linear-gradient(180deg,#454f78,#2a3252);z-index:3}
+.bz-post{position:absolute;left:22px;bottom:36px;width:12px;height:36px;border-radius:2px;
+  background:linear-gradient(90deg,#8893b7,#cdd5ec 45%,#5c668c);z-index:3}
+.bz-pivot{position:absolute;left:19px;bottom:66px;width:17px;height:17px;border-radius:50%;z-index:5;
   background:radial-gradient(circle at 35% 35%,#e3e9f9,#7c88ad);border:1px solid rgba(0,0,0,.35)}
-.bz-boom{position:absolute;left:43px;bottom:57px;width:74px;height:9px;border-radius:5px;z-index:2;
-  transform-origin:4px 4px;transform:rotate(0deg);
+/* the boom is long enough to bar the car; when open it stands up out of frame */
+.bz-boom{position:absolute;left:27px;bottom:70px;width:250px;height:12px;border-radius:6px;z-index:4;
+  transform-origin:6px 6px;transform:rotate(0deg);
   transition:transform 1s cubic-bezier(.22,1,.36,1);
-  background:repeating-linear-gradient(45deg,#e5484d 0 10px,#f4f6fb 10px 20px);
-  border:1px solid rgba(0,0,0,.4);box-shadow:0 2px 6px rgba(0,0,0,.45)}
-.bz-boom.open{transform:rotate(-78deg)}
-.bz-boom.unknown{transform:rotate(-40deg);filter:grayscale(.85) brightness(.85)}
+  background:repeating-linear-gradient(45deg,#e5484d 0 13px,#f4f6fb 13px 26px);
+  border:1px solid rgba(0,0,0,.4);box-shadow:0 3px 8px rgba(0,0,0,.45)}
+.bz-boom.open{transform:rotate(-84deg)}
+.bz-boom.unknown{transform:rotate(-45deg);filter:grayscale(.85) brightness(.85)}
 </style>
 
 <p class="muted" style="margin:-4px 0 18px;max-width:760px"><?= htmlspecialchars(I18n::t('bar_intro')) ?></p>
@@ -183,6 +189,7 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
     </div>
     <div class="bz <?= htmlspecialchars($st) ?>">
       <div class="bz-road"></div>
+      <div class="bz-lane"></div>
       <div class="bz-car">
         <span class="cw l"></span><span class="cw r"></span>
         <span class="cbody"></span>
