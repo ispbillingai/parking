@@ -122,6 +122,32 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
   border:1px solid var(--border);background:rgba(255,255,255,.04)}
 .pill.warn{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:#fde68a}
 .pill.ok{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35);color:#a7f3d0}
+
+/* --- Barrier illustration: a boom arm that lifts when the gate is open --- */
+.bz{position:relative;width:100%;height:200px;border-radius:14px;overflow:hidden;
+  border:1px solid var(--border);
+  background:linear-gradient(180deg,#0d1538 0%,#182253 72%)}
+.bz.open{box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
+.bz.closed{box-shadow:inset 0 0 0 1px rgba(248,113,113,.30)}
+.bz-road{position:absolute;left:0;right:0;bottom:0;height:44px;
+  background:#212b52;border-top:2px solid rgba(255,255,255,.06)}
+.bz-road::before{content:"";position:absolute;left:0;right:0;top:21px;height:3px;
+  background:repeating-linear-gradient(90deg,#f4c542 0 18px,transparent 18px 40px);opacity:.55}
+.bz-car{position:absolute;bottom:42px;left:150px;font-size:34px;line-height:1;
+  filter:drop-shadow(0 5px 5px rgba(0,0,0,.55))}
+.bz-base{position:absolute;left:42px;bottom:40px;width:34px;height:12px;border-radius:4px;
+  background:linear-gradient(180deg,#454f78,#2a3252)}
+.bz-post{position:absolute;left:52px;bottom:44px;width:14px;height:50px;border-radius:3px;
+  background:linear-gradient(90deg,#8893b7,#cdd5ec 45%,#5c668c)}
+.bz-pivot{position:absolute;left:49px;bottom:80px;width:20px;height:20px;border-radius:50%;z-index:3;
+  background:radial-gradient(circle at 35% 35%,#e3e9f9,#7c88ad);border:1px solid rgba(0,0,0,.35)}
+.bz-boom{position:absolute;left:59px;bottom:84px;width:120px;height:12px;border-radius:6px;z-index:2;
+  transform-origin:6px 6px;transform:rotate(0deg);
+  transition:transform 1s cubic-bezier(.22,1,.36,1);
+  background:repeating-linear-gradient(45deg,#e5484d 0 14px,#f4f6fb 14px 28px);
+  border:1px solid rgba(0,0,0,.4);box-shadow:0 3px 9px rgba(0,0,0,.45)}
+.bz-boom.open{transform:rotate(-76deg)}
+.bz-boom.unknown{transform:rotate(-40deg);filter:grayscale(.85) brightness(.85)}
 </style>
 
 <p class="muted" style="margin:-4px 0 18px;max-width:760px"><?= htmlspecialchars(I18n::t('bar_intro')) ?></p>
@@ -138,6 +164,15 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
         <span class="b-dot <?= htmlspecialchars($st) ?>"></span>
         <?= htmlspecialchars($statusLabel[$st] ?? $st) ?>
       </span>
+    </div>
+    <div class="bz <?= htmlspecialchars($st) ?>">
+      <div class="bz-road"></div>
+      <div class="bz-car">&#x1F697;</div>
+      <div class="bz-base"></div>
+      <div class="bz-post"></div>
+      <div class="bz-pivot"></div>
+      <div class="bz-boom <?= $st === 'open' ? 'open' : ($st === 'unknown' ? 'unknown' : '') ?>"
+           data-status="<?= htmlspecialchars($st) ?>"></div>
     </div>
     <div class="b-meta">
       <?= htmlspecialchars(I18n::t('bar_last_change')) ?>:
@@ -251,6 +286,16 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
 </div>
 
 <script>
+// Animate each boom from "closed" to its real state on load, so an open
+// barrier visibly lifts on every refresh.
+document.querySelectorAll('.bz-boom').forEach(function (b) {
+  var state = b.dataset.status;
+  if (state !== 'open' && state !== 'unknown') return;
+  b.classList.remove(state);
+  void b.offsetWidth;            // force reflow so the transition replays
+  requestAnimationFrame(function () { b.classList.add(state); });
+});
+
 // Keep the open/closed status fresh while the page is left open.
 setTimeout(() => location.reload(), 10000);
 </script>
