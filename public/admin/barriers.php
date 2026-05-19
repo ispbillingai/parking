@@ -124,29 +124,29 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
 .pill.ok{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35);color:#a7f3d0}
 
 /* --- Barrier illustration: a boom arm that lifts when the gate is open --- */
-.bz{position:relative;width:100%;height:200px;border-radius:14px;overflow:hidden;
-  border:1px solid var(--border);
+.bz{position:relative;width:100%;max-width:320px;margin:2px auto;height:130px;
+  border-radius:12px;overflow:hidden;border:1px solid var(--border);
   background:linear-gradient(180deg,#0d1538 0%,#182253 72%)}
 .bz.open{box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
 .bz.closed{box-shadow:inset 0 0 0 1px rgba(248,113,113,.30)}
-.bz-road{position:absolute;left:0;right:0;bottom:0;height:44px;
+.bz-road{position:absolute;left:0;right:0;bottom:0;height:30px;
   background:#212b52;border-top:2px solid rgba(255,255,255,.06)}
-.bz-road::before{content:"";position:absolute;left:0;right:0;top:21px;height:3px;
-  background:repeating-linear-gradient(90deg,#f4c542 0 18px,transparent 18px 40px);opacity:.55}
-.bz-car{position:absolute;bottom:42px;left:150px;font-size:34px;line-height:1;
-  filter:drop-shadow(0 5px 5px rgba(0,0,0,.55))}
-.bz-base{position:absolute;left:42px;bottom:40px;width:34px;height:12px;border-radius:4px;
+.bz-road::before{content:"";position:absolute;left:0;right:0;top:14px;height:3px;
+  background:repeating-linear-gradient(90deg,#f4c542 0 16px,transparent 16px 34px);opacity:.55}
+.bz-car{position:absolute;bottom:27px;left:150px;font-size:22px;line-height:1;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.55))}
+.bz-base{position:absolute;left:30px;bottom:25px;width:26px;height:9px;border-radius:3px;
   background:linear-gradient(180deg,#454f78,#2a3252)}
-.bz-post{position:absolute;left:52px;bottom:44px;width:14px;height:50px;border-radius:3px;
+.bz-post{position:absolute;left:38px;bottom:30px;width:10px;height:32px;border-radius:2px;
   background:linear-gradient(90deg,#8893b7,#cdd5ec 45%,#5c668c)}
-.bz-pivot{position:absolute;left:49px;bottom:80px;width:20px;height:20px;border-radius:50%;z-index:3;
+.bz-pivot{position:absolute;left:36px;bottom:54px;width:14px;height:14px;border-radius:50%;z-index:3;
   background:radial-gradient(circle at 35% 35%,#e3e9f9,#7c88ad);border:1px solid rgba(0,0,0,.35)}
-.bz-boom{position:absolute;left:59px;bottom:84px;width:120px;height:12px;border-radius:6px;z-index:2;
-  transform-origin:6px 6px;transform:rotate(0deg);
+.bz-boom{position:absolute;left:43px;bottom:57px;width:74px;height:9px;border-radius:5px;z-index:2;
+  transform-origin:4px 4px;transform:rotate(0deg);
   transition:transform 1s cubic-bezier(.22,1,.36,1);
-  background:repeating-linear-gradient(45deg,#e5484d 0 14px,#f4f6fb 14px 28px);
-  border:1px solid rgba(0,0,0,.4);box-shadow:0 3px 9px rgba(0,0,0,.45)}
-.bz-boom.open{transform:rotate(-76deg)}
+  background:repeating-linear-gradient(45deg,#e5484d 0 10px,#f4f6fb 10px 20px);
+  border:1px solid rgba(0,0,0,.4);box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.bz-boom.open{transform:rotate(-78deg)}
 .bz-boom.unknown{transform:rotate(-40deg);filter:grayscale(.85) brightness(.85)}
 </style>
 
