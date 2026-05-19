@@ -47,10 +47,13 @@ return [
             'exit_prefix'      => '/parkingOUT',        // exit barrier card (+ Wiegand reader)
             'entrance_prefix'  => '/parkingIN',         // entrance barrier card
             'semaforo_prefix'  => '/parkingSemaforo',   // Free/Full traffic-light card
-            // Resolved control topics — leave blank; the listener fills them.
-            'exit_control'     => '',
-            'entrance_control' => '',
-            'semaforo_control' => '',
+            // Resolved control topics. The listener still re-discovers and
+            // updates these as settings, but they are pre-seeded here from the
+            // known device IDs (OUT=relay47041, IN=relay47040, Semaforo=relay47053)
+            // so the Barriers page works before the listener has run.
+            'exit_control'     => '/parkingOUT/relay47041/in/control',
+            'entrance_control' => '/parkingIN/relay47040/in/control',
+            'semaforo_control' => '/parkingSemaforo/relay47053/in/control',
         ],
         'relay_payload' => '1',
     ],
