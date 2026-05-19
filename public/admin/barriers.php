@@ -133,8 +133,24 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
   background:#212b52;border-top:2px solid rgba(255,255,255,.06)}
 .bz-road::before{content:"";position:absolute;left:0;right:0;top:14px;height:3px;
   background:repeating-linear-gradient(90deg,#f4c542 0 16px,transparent 16px 34px);opacity:.55}
-.bz-car{position:absolute;bottom:27px;left:150px;font-size:22px;line-height:1;
-  filter:drop-shadow(0 4px 4px rgba(0,0,0,.55))}
+.bz-car{position:absolute;bottom:23px;left:158px;width:46px;height:40px;z-index:1;
+  filter:drop-shadow(0 4px 5px rgba(0,0,0,.5))}
+.bz-car span{position:absolute}
+.bz-car .cw{bottom:0;width:11px;height:11px;border-radius:50%;
+  background:radial-gradient(circle at 40% 40%,#3a3f4d,#0d1018)}
+.bz-car .cw.l{left:3px}
+.bz-car .cw.r{right:3px}
+.bz-car .cbody{bottom:5px;left:1px;width:44px;height:20px;border-radius:7px;
+  background:linear-gradient(180deg,#f0564f,#be2b29)}
+.bz-car .ccabin{bottom:19px;left:9px;width:28px;height:15px;border-radius:8px 8px 3px 3px;
+  background:linear-gradient(180deg,#f0564f,#cf322f)}
+.bz-car .cglass{bottom:21px;left:12px;width:22px;height:10px;border-radius:5px 5px 2px 2px;
+  background:linear-gradient(180deg,#cfe3f2,#8fb4d0)}
+.bz-car .cgrille{bottom:8px;left:10px;width:26px;height:4px;border-radius:2px;background:rgba(0,0,0,.45)}
+.bz-car .clight{bottom:9px;width:8px;height:6px;border-radius:2px;
+  background:#ffe487;box-shadow:0 0 7px #ffd24d}
+.bz-car .clight.l{left:4px}
+.bz-car .clight.r{right:4px}
 .bz-base{position:absolute;left:30px;bottom:25px;width:26px;height:9px;border-radius:3px;
   background:linear-gradient(180deg,#454f78,#2a3252)}
 .bz-post{position:absolute;left:38px;bottom:30px;width:10px;height:32px;border-radius:2px;
@@ -167,7 +183,14 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
     </div>
     <div class="bz <?= htmlspecialchars($st) ?>">
       <div class="bz-road"></div>
-      <div class="bz-car">&#x1F697;</div>
+      <div class="bz-car">
+        <span class="cw l"></span><span class="cw r"></span>
+        <span class="cbody"></span>
+        <span class="ccabin"></span>
+        <span class="cglass"></span>
+        <span class="cgrille"></span>
+        <span class="clight l"></span><span class="clight r"></span>
+      </div>
       <div class="bz-base"></div>
       <div class="bz-post"></div>
       <div class="bz-pivot"></div>
