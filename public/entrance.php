@@ -10,6 +10,7 @@ use Parking\I18n;
 use Parking\Notify\TextMeBot;
 use Parking\Notify\Template;
 use Parking\Pin\Generator;
+use Parking\Printer\Thermal;
 
 $pdo = Db::pdo($cfg['db']);
 $cfg = Settings::overlay($cfg, $pdo);
@@ -36,6 +37,30 @@ Db::logEvent($pdo, $sessionId, $pin, 'entry', $phone ? ['phone' => $phone] : [])
 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=' . urlencode($pin);
 $serial = 'N° ' . str_pad((string) $sessionId, 6, '0', STR_PAD_LEFT);
 $plate  = '—';
+
+// Push the ticket straight to the network thermal printer over ESC/POS,
+// so the operator never sees a browser print dialog. The HTML page below
+// is just a visual confirmation.
+$printRes = ['ok' => false, 'error' => 'printer not configured'];
+$printer = new Thermal($cfg['printer'] ?? []);
+if ($printer->isEnabled()) {
+    $printRes = $printer->printEntranceTicket([
+        'brand'       => I18n::t('entrance_title'),
+        'serial'      => $serial,
+        'entry_label' => I18n::t('entrance_entry_time'),
+        'entry_time'  => $now->format('d/m/Y H:i'),
+        'plate_label' => I18n::t('entrance_plate'),
+        'plate'       => $plate,
+        'pin_label'   => I18n::t('entrance_pin'),
+        'pin'         => $pin,
+        'note'        => I18n::t('entrance_note'),
+    ]);
+    Db::logEvent($pdo, $sessionId, $pin, 'admin_action', [
+        'action' => 'thermal_print',
+        'ok'     => $printRes['ok'],
+        'error'  => $printRes['error'] ?? null,
+    ]);
+}
 
 $waSent = false;
 if ($phone && !empty($cfg['textmebot']['api_key'])) {
@@ -155,6 +180,12 @@ if (($_GET['format'] ?? '') === 'json') {
     padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;
     box-shadow:0 8px 24px rgba(16,185,129,.25);
   }
+  .print-status{
+    display:inline-block;margin:-4px auto 10px;padding:6px 12px;border-radius:999px;
+    font-size:12px;font-weight:700;letter-spacing:.06em;
+  }
+  .print-status.ok{background:rgba(52,211,153,.12);color:#a7f3d0;border:1px solid rgba(52,211,153,.35)}
+  .print-status.err{background:rgba(248,113,113,.10);color:#fecaca;border:1px solid rgba(248,113,113,.35)}
   .noprint{margin-top:22px}
   .noprint button{
     font-size:15px;padding:12px 22px;border-radius:12px;cursor:pointer;
@@ -228,13 +259,20 @@ if (($_GET['format'] ?? '') === 'json') {
   }
 </style>
 </head>
-<body onload="window.print()">
+<body>
   <nav class="lang-switch" aria-label="Language">
     <?php foreach (I18n::labels() as $label => $code): ?>
       <a href="<?= htmlspecialchars($currentUrl . '?lang=' . $code) ?>" class="<?= $code === $lang ? 'active' : '' ?>"><?= htmlspecialchars($label) ?></a>
     <?php endforeach; ?>
   </nav>
   <div class="ticket">
+    <?php if ($printer->isEnabled()): ?>
+      <?php if ($printRes['ok']): ?>
+        <div class="print-status ok"><?= htmlspecialchars(I18n::t('entrance_print_ok')) ?></div>
+      <?php else: ?>
+        <div class="print-status err"><?= htmlspecialchars(I18n::t('entrance_print_fail', ['err' => (string) ($printRes['error'] ?? '')])) ?></div>
+      <?php endif; ?>
+    <?php endif; ?>
     <span class="brand"><span class="dot"></span><?= htmlspecialchars(I18n::t('brand_ticket')) ?></span>
     <h1><?= htmlspecialchars(I18n::t('entrance_heading')) ?></h1>
     <div class="serial"><?= htmlspecialchars($serial) ?></div>
@@ -258,7 +296,12 @@ if (($_GET['format'] ?? '') === 'json') {
     <div class="sep"></div>
     <div class="note"><?= htmlspecialchars(I18n::t('entrance_note')) ?></div>
     <?php if ($waSent): ?><div class="wa"><?= htmlspecialchars(I18n::t('entrance_whatsapp', ['phone' => $phone])) ?></div><?php endif; ?>
-    <div class="noprint"><button onclick="location.href='entrance.php'"><?= htmlspecialchars(I18n::t('entrance_new')) ?></button></div>
+    <div class="noprint">
+      <button onclick="location.href='entrance.php'"><?= htmlspecialchars(I18n::t('entrance_new')) ?></button>
+      <?php if ($printer->isEnabled() && !$printRes['ok']): ?>
+        <button onclick="window.print()" style="margin-left:8px"><?= htmlspecialchars(I18n::t('entrance_reprint')) ?></button>
+      <?php endif; ?>
+    </div>
   </div>
 </body>
 </html>

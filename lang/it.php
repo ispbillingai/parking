@@ -31,6 +31,9 @@ return [
     'entrance_whatsapp' => 'Copia inviata su WhatsApp al {phone}',
     'entrance_new'      => 'Nuovo ticket',
     'entrance_title'    => 'Ticket parcheggio',
+    'entrance_print_ok'   => 'Biglietto stampato.',
+    'entrance_print_fail' => 'Errore stampante termica: {err}',
+    'entrance_reprint'    => 'Stampa dal browser',
 
     'pay_title'           => 'Cassa parcheggio',
     'pay_insert_ticket'   => 'Inserisci ticket',

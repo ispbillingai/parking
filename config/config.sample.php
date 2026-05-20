@@ -58,6 +58,18 @@ return [
         'relay_payload' => '1',
     ],
 
+    // Network thermal receipt printer driven over raw TCP (port 9100).
+    // entrance.php pushes the ESC/POS ticket straight here, so the
+    // operator never sees a browser print dialog. Leave 'host' blank to
+    // disable and fall back to the on-screen ticket only.
+    'printer' => [
+        'host'     => '192.168.52.240',
+        'port'     => 9100,
+        'timeout'  => 5,        // seconds
+        'width'    => 32,       // characters per printed line
+        'codepage' => 2,        // 2 = CP850 Multilingual (è à ò)
+    ],
+
     // Tariff. Amounts in cents of the display currency.
     'tariff' => [
         'currency'        => 'EUR',

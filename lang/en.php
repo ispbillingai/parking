@@ -31,6 +31,9 @@ return [
     'entrance_whatsapp' => 'A copy has been sent via WhatsApp to {phone}',
     'entrance_new'      => 'New ticket',
     'entrance_title'    => 'Parking ticket',
+    'entrance_print_ok'   => 'Ticket printed.',
+    'entrance_print_fail' => 'Thermal printer error: {err}',
+    'entrance_reprint'    => 'Print again from browser',
 
     'pay_title'           => 'Parking cashier',
     'pay_insert_ticket'   => 'Enter ticket',
