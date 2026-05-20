@@ -63,7 +63,7 @@ return [
     // operator never sees a browser print dialog. Leave 'host' blank to
     // disable and fall back to the on-screen ticket only.
     'printer' => [
-        'host'     => '192.168.52.240',
+        'host'     => '10.1.1.52',
         'port'     => 9100,
         'timeout'  => 5,        // seconds
         'width'    => 32,       // characters per printed line
