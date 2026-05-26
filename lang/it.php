@@ -398,6 +398,8 @@ return [
     'links_kiosk_entrance_why'   => 'GET che il cancello d\'ingresso esegue all\'arrivo di un\'auto. Genera un PIN univoco, inserisce la riga in parking_sessions, stampa il ticket. Accetta ?phone=+39... per inviare il PIN anche via WhatsApp.',
     'links_kiosk_entrance_json_label' => 'Ingresso · API JSON',
     'links_kiosk_entrance_json_why'   => 'Come sopra ma restituisce JSON invece del ticket stampabile. Utile per integrazioni headless o display esterni.',
+    'links_kiosk_printticket_label' => 'Stampa ticket · GET headless (per il cancello)',
+    'links_kiosk_printticket_why'   => 'Endpoint in testo semplice per il controller del cancello: una GET genera un PIN, stampa il ticket termico e risponde "OK". In caso di errore restituisce "ERR: <motivo>" con codice 5xx. Accetta ?phone=+39... per inviare il PIN anche via WhatsApp.',
     'links_kiosk_totem_label' => 'Totem · invio email / WhatsApp (Scenario 2)',
     'links_kiosk_totem_why'   => 'Postazione di ingresso self-service. Il cliente sceglie Stampa / WhatsApp / Email e può inserire nome e contatto. Crea automaticamente il record cliente, così i clienti abituali vengono riconosciuti.',
     'links_kiosk_subentry_label' => 'Ingresso abbonati · chiave elettronica (Scenario 3)',

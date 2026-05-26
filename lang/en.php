@@ -400,6 +400,8 @@ return [
     'links_kiosk_entrance_why'   => 'GET request the entrance gate fires when a car arrives. Generates a unique PIN, inserts a parking_sessions row, prints the ticket. Accepts ?phone=+39... to also send the PIN over WhatsApp.',
     'links_kiosk_entrance_json_label' => 'Entrance · JSON API',
     'links_kiosk_entrance_json_why'   => 'Same as above but returns JSON instead of the printable ticket. Useful for headless integrations or external displays.',
+    'links_kiosk_printticket_label' => 'Print ticket · headless GET (for the gate)',
+    'links_kiosk_printticket_why'   => 'Plain-text endpoint for the gate controller: a GET issues a PIN, prints the thermal ticket, and replies "OK". Returns "ERR: <reason>" with a 5xx code on failure. Accepts ?phone=+39... to also send the PIN via WhatsApp.',
     'links_kiosk_totem_label' => 'Totem · email / WhatsApp delivery (Scenario 2)',
     'links_kiosk_totem_why'   => 'Self-service entrance station. Customer picks Print / WhatsApp / Email, optionally enters name and contact. Auto-creates a customer record so repeat visitors are recognised.',
     'links_kiosk_subentry_label' => 'Subscriber entrance · electronic key (Scenario 3)',

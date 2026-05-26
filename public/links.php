@@ -24,6 +24,7 @@ $sections = [
             ['href' => 'index.php',             'label_key' => 'links_kiosk_home_label',       'why_key' => 'links_kiosk_home_why'],
             ['href' => 'entrance.php',          'label_key' => 'links_kiosk_entrance_label',   'why_key' => 'links_kiosk_entrance_why'],
             ['href' => 'entrance.php?format=json','label_key'=>'links_kiosk_entrance_json_label','why_key'=>'links_kiosk_entrance_json_why'],
+            ['href' => 'print-ticket.php',      'label_key' => 'links_kiosk_printticket_label','why_key' => 'links_kiosk_printticket_why'],
             ['href' => 'totem.php',             'label_key' => 'links_kiosk_totem_label',      'why_key' => 'links_kiosk_totem_why'],
             ['href' => 'subscriber-entry.php',  'label_key' => 'links_kiosk_subentry_label',   'why_key' => 'links_kiosk_subentry_why'],
             ['href' => 'daily-ticket.php',      'label_key' => 'links_kiosk_daily_label',      'why_key' => 'links_kiosk_daily_why'],
