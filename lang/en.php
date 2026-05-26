@@ -504,6 +504,9 @@ return [
     'flash_barrier_lock'     => 'Entrance barrier {state}.',
     'flash_barrier_mqtt_err' => 'MQTT error — could not reach the relay: {err}',
     'flash_barrier_unknown'  => 'Unknown barrier.',
+    'bar_action_open'          => 'Open barrier',
+    'bar_action_traffic_light' => 'Traffic light',
+    'bar_action_entrance_lock' => 'Entrance lock',
 
     // Daily revenue page
     'rev_daily_title'    => 'Daily ticket revenue',
@@ -530,6 +533,7 @@ return [
     // Car parks
     'cp_title'           => 'Car parks',
     'cp_intro'           => 'A car park groups one or more entrance and exit barriers. The default car park exists for backwards compatibility; add a new one if you operate multiple sites.',
+    'cp_default_name'    => 'Default car park',
     'cp_new'             => 'Add car park',
     'cp_name'            => 'Name',
     'cp_code'            => 'Code',

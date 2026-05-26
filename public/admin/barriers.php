@@ -88,9 +88,16 @@ $barriers = $pdo->query(
      ORDER BY COALESCE(cp.name, ''), b.direction, b.code"
 )->fetchAll();
 
+// Seeded "default" car park gets a translated label; everything else
+// is admin-provided text and renders as-is.
+$parkLabel = static function (?string $code, ?string $name): string {
+    if ($code === 'default') return I18n::t('cp_default_name');
+    return (string) ($name ?? '—');
+};
+
 $barriersByPark = [];
 foreach ($barriers as $b) {
-    $key = (string) ($b['car_park_name'] ?? '—');
+    $key = $parkLabel($b['car_park_code'] ?? null, $b['car_park_name'] ?? null);
     $barriersByPark[$key][] = $b;
 }
 
@@ -323,10 +330,13 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
         <?php foreach ($recent as $e):
             $d = $e['details'] ? json_decode((string) $e['details'], true) : [];
             $act = (string) ($d['action'] ?? 'barrier');
+            $actKey = 'bar_action_' . $act;
+            $actLbl = I18n::t($actKey);
+            if ($actLbl === $actKey) $actLbl = $act;
         ?>
           <tr>
             <td><?= htmlspecialchars((new DateTime($e['created_at']))->format('d/m/Y H:i:s')) ?></td>
-            <td><?= htmlspecialchars($act) ?></td>
+            <td><?= htmlspecialchars($actLbl) ?></td>
             <td><code class="k"><?= htmlspecialchars(json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></code></td>
           </tr>
         <?php endforeach; ?>

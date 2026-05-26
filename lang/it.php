@@ -502,6 +502,9 @@ return [
     'flash_barrier_lock'     => 'Barriera di ingresso {state}.',
     'flash_barrier_mqtt_err' => 'Errore MQTT — impossibile raggiungere il relè: {err}',
     'flash_barrier_unknown'  => 'Barriera sconosciuta.',
+    'bar_action_open'          => 'Apertura barriera',
+    'bar_action_traffic_light' => 'Semaforo',
+    'bar_action_entrance_lock' => 'Blocco ingresso',
 
     // Incassi giornalieri
     'rev_daily_title'    => 'Incassi biglietti giornalieri',
@@ -528,6 +531,7 @@ return [
     // Parcheggi
     'cp_title'           => 'Parcheggi',
     'cp_intro'           => 'Un parcheggio raggruppa una o più barriere di entrata e uscita. Il parcheggio predefinito esiste per compatibilità; aggiungine uno se gestisci più strutture.',
+    'cp_default_name'    => 'Parcheggio predefinito',
     'cp_new'             => 'Nuovo parcheggio',
     'cp_name'            => 'Nome',
     'cp_code'            => 'Codice',

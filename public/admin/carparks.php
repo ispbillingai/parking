@@ -113,7 +113,7 @@ Layout::begin(I18n::t('cp_title'), 'carparks');
 <?php foreach ($parks as $p): $list = $byPark[(int) $p['id']] ?? []; ?>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <h2 style="margin:0"><?= htmlspecialchars($p['name']) ?> <code class="k"><?= htmlspecialchars($p['code']) ?></code></h2>
+      <h2 style="margin:0"><?= htmlspecialchars($p['code'] === 'default' ? I18n::t('cp_default_name') : $p['name']) ?> <code class="k"><?= htmlspecialchars($p['code']) ?></code></h2>
       <?php if (!$list && (string) $p['code'] !== 'default'): ?>
         <form method="post" style="display:inline">
           <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
