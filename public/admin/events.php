@@ -23,7 +23,14 @@ $validTypes = [
     'email_sent','email_fail','subscription_entry','subscription_exit',
     'subscription_payment','daily_ticket_sold','barrier',
     'admin_login','admin_logout','admin_action',
+    'admin_user_added','admin_user_deleted',
 ];
+
+$eventLabel = static function (string $code): string {
+    $k = 'event_' . $code;
+    $t = I18n::t($k);
+    return $t === $k ? $code : $t;
+};
 
 $where = []; $args = [];
 if (in_array($type, $validTypes, true)) { $where[] = 'event_type = ?'; $args[] = $type; }
@@ -54,7 +61,7 @@ Layout::begin(I18n::t('nav_events'), 'events');
       <select name="type">
         <option value=""><?= htmlspecialchars(I18n::t('filter_all')) ?></option>
         <?php foreach ($validTypes as $t): ?>
-          <option value="<?= $t ?>" <?= $type === $t ? 'selected' : '' ?>><?= $t ?></option>
+          <option value="<?= $t ?>" <?= $type === $t ? 'selected' : '' ?>><?= htmlspecialchars($eventLabel($t)) ?></option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -89,7 +96,7 @@ Layout::begin(I18n::t('nav_events'), 'events');
           <tr>
             <td>#<?= (int) $r['id'] ?></td>
             <td><?= htmlspecialchars((new DateTime($r['created_at']))->format('d/m/Y H:i:s')) ?></td>
-            <td><?= htmlspecialchars($r['event_type']) ?></td>
+            <td><?= htmlspecialchars($eventLabel((string) $r['event_type'])) ?></td>
             <td><?= $r['pin'] ? '<code class="k">' . htmlspecialchars($r['pin']) . '</code>' : '<span class="muted">—</span>' ?></td>
             <td><?= $r['session_id']      ? '#' . (int) $r['session_id']      : '<span class="muted">—</span>' ?></td>
             <td><?= $r['subscription_id'] ? '#' . (int) $r['subscription_id'] : '<span class="muted">—</span>' ?></td>

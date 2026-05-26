@@ -175,7 +175,8 @@ $pdo->exec(
     'scan_at_exit','gate_open','denied','whatsapp_sent','whatsapp_fail',
     'email_sent','email_fail','subscription_entry','subscription_exit',
     'subscription_payment','daily_ticket_sold','barrier',
-    'admin_login','admin_logout','admin_action'
+    'admin_login','admin_logout','admin_action',
+    'admin_user_added','admin_user_deleted'
 ) NOT NULL");
 step('   widened event_type ENUM');
 

@@ -165,7 +165,9 @@ CREATE TABLE IF NOT EXISTS gate_events (
         'barrier',
         'admin_login',
         'admin_logout',
-        'admin_action'
+        'admin_action',
+        'admin_user_added',
+        'admin_user_deleted'
     ) NOT NULL,
     details JSON NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

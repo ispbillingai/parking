@@ -25,6 +25,7 @@ final class Layout
         'revenue_daily' => ['revenue-daily.php', 'nav_revenue_daily', '&#x1F4B0;'],
         'revenue_subs'  => ['revenue-subs.php',  'nav_revenue_subs',  '&#x1F4B5;'],
         'carparks'      => ['carparks.php',      'nav_carparks',      '&#x1F17F;&#xFE0F;'],
+        'users'         => ['users.php',         'nav_users',         '&#x1F464;'],
         'notifications' => ['notifications.php', 'nav_notifications', '&#x1F4E8;'],
         'settings'      => ['settings.php',      'nav_settings',      '&#x2699;&#xFE0F;'],
     ];

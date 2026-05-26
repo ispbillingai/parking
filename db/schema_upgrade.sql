@@ -146,7 +146,9 @@ BEGIN
         'barrier',
         'admin_login',
         'admin_logout',
-        'admin_action'
+        'admin_action',
+        'admin_user_added',
+        'admin_user_deleted'
     ) NOT NULL;
 
     -- Daily ticket support: 'daily' period + rolling 24h expiry

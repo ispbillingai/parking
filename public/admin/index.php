@@ -101,7 +101,7 @@ Layout::begin(I18n::t('nav_dashboard'), 'dashboard');
         <?php foreach ($recentEvents as $e): ?>
           <tr>
             <td><?= htmlspecialchars((new DateTime($e['created_at']))->format('d/m H:i:s')) ?></td>
-            <td><?= htmlspecialchars($e['event_type']) ?></td>
+            <td><?php $lk = 'event_' . $e['event_type']; $lt = I18n::t($lk); echo htmlspecialchars($lt === $lk ? (string) $e['event_type'] : $lt); ?></td>
             <td><?= $e['pin'] ? '<code class="k">' . htmlspecialchars($e['pin']) . '</code>' : '<span class="muted">—</span>' ?></td>
           </tr>
         <?php endforeach; ?>
