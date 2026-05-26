@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/_init.php';
 
 use Parking\Admin\Auth;
+use Parking\Admin\EventHumanizer;
 use Parking\Admin\Layout;
 use Parking\Admin\Settings;
 use Parking\Db;
@@ -330,38 +331,11 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
         <?php foreach ($recent as $e):
             $d = $e['details'] ? json_decode((string) $e['details'], true) : [];
             if (!is_array($d)) $d = [];
-            $act    = (string) ($d['action'] ?? 'barrier');
-            $user   = (string) ($d['user']   ?? '?');
-            $state  = (string) ($d['state']  ?? '');
-
+            $act = (string) ($d['action'] ?? 'barrier');
             $actKey = 'bar_action_' . $act;
             $actLbl = I18n::t($actKey);
             if ($actLbl === $actKey) $actLbl = $act;
-
-            // Build a human-readable sentence per action. Fall back to the
-            // raw JSON only when an unknown action shows up.
-            $detail = null;
-            if ($act === 'open') {
-                $bcode = (string) ($d['barrier'] ?? '');
-                $bname = I18n::t('bar_name_' . $bcode);
-                if ($bname === 'bar_name_' . $bcode) $bname = $bcode;
-                $direction = (string) ($d['direction'] ?? $bcode);
-                $dirLbl = I18n::t('bar_dir_' . $direction);
-                if ($dirLbl === 'bar_dir_' . $direction) $dirLbl = $direction;
-                $detail = I18n::t('bar_detail_open', [
-                    'barrier'   => $bname,
-                    'direction' => $dirLbl,
-                    'user'      => $user,
-                ]);
-            } elseif ($act === 'traffic_light') {
-                $detail = I18n::t($state === 'full' ? 'bar_detail_traffic_full' : 'bar_detail_traffic_free', [
-                    'user' => $user,
-                ]);
-            } elseif ($act === 'entrance_lock') {
-                $detail = I18n::t($state === 'locked' ? 'bar_detail_lock_locked' : 'bar_detail_lock_unlocked', [
-                    'user' => $user,
-                ]);
-            }
+            $detail = EventHumanizer::render('barrier', $d);
         ?>
           <tr>
             <td><?= htmlspecialchars((new DateTime($e['created_at']))->format('d/m/Y H:i:s')) ?></td>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/_init.php';
 
 use Parking\Admin\Auth;
+use Parking\Admin\EventHumanizer;
 use Parking\Admin\Layout;
 use Parking\I18n;
 
@@ -104,7 +105,13 @@ Layout::begin(I18n::t('nav_events'), 'events');
               if (!$r['details']) { echo '<span class="muted">—</span>'; }
               else {
                 $d = json_decode((string) $r['details'], true);
-                echo '<code class="k">' . htmlspecialchars(json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '</code>';
+                if (!is_array($d)) $d = [];
+                $human = EventHumanizer::render((string) $r['event_type'], $d);
+                if ($human !== null) {
+                    echo htmlspecialchars($human);
+                } else {
+                    echo '<code class="k">' . htmlspecialchars(json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '</code>';
+                }
               }
             ?></td>
           </tr>
