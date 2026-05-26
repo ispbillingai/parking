@@ -18,6 +18,47 @@ $cfg = Settings::overlay($cfg, $pdo);
 $lang = I18n::init($cfg['app']['default_lang'] ?? null);
 $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
 
+// Idle screen — shown between customers so the previous PIN/QR is not
+// left on the display. The big button issues the next ticket.
+if (isset($_GET['ready']) && ($_GET['format'] ?? '') !== 'json') {
+    require __DIR__ . '/../vendor/autoload.php';
+    ?><!doctype html>
+<html lang="<?= htmlspecialchars($lang) ?>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title><?= htmlspecialchars(I18n::t('entrance_title')) ?></title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;color:#e7ecf5;background:radial-gradient(1100px 700px at 10% -10%,#1b2555 0%,transparent 55%),radial-gradient(900px 600px at 110% 110%,#0b3b53 0%,transparent 50%),linear-gradient(180deg,#0b1020 0%,#0f1530 100%);display:flex;align-items:center;justify-content:center;padding:24px}
+.box{width:100%;max-width:520px;text-align:center;padding:48px 32px;border-radius:24px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.brand{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid rgba(255,255,255,.10);border-radius:999px;color:#9aa4bf;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:18px}
+.dot{width:8px;height:8px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px #5eead4}
+h1{font-size:32px;margin:0 0 28px;letter-spacing:-.01em;background:linear-gradient(90deg,#fff,#a5f3fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+a.cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:22px 36px;border-radius:18px;background:linear-gradient(135deg,#5eead4,#38bdf8);color:#0b1020;font-size:22px;font-weight:800;text-decoration:none;box-shadow:0 14px 40px rgba(94,234,212,.30)}
+a.cta:hover{transform:translateY(-1px)}
+.lang-switch{position:fixed;top:18px;right:18px;display:flex;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.10);border-radius:999px;background:rgba(255,255,255,.04)}
+.lang-switch a{display:inline-block;padding:6px 12px;border-radius:999px;color:#9aa4bf;font-size:12px;font-weight:700;text-decoration:none}
+.lang-switch a.active{background:linear-gradient(135deg,#5eead4,#38bdf8);color:#0b1020}
+</style>
+</head>
+<body>
+<nav class="lang-switch" aria-label="<?= htmlspecialchars(I18n::t('a11y_language')) ?>">
+  <?php foreach (I18n::labels() as $label => $code): ?>
+    <a href="entrance.php?ready=1&lang=<?= htmlspecialchars($code) ?>" class="<?= $code === $lang ? 'active' : '' ?>"><?= htmlspecialchars($label) ?></a>
+  <?php endforeach; ?>
+</nav>
+<div class="box">
+  <span class="brand"><span class="dot"></span><?= htmlspecialchars(I18n::t('brand_ticket')) ?></span>
+  <h1><?= htmlspecialchars(I18n::t('entrance_heading')) ?></h1>
+  <a class="cta" href="entrance.php">&#x1F39F; <?= htmlspecialchars(I18n::t('entrance_new')) ?></a>
+</div>
+</body>
+</html>
+    <?php
+    exit;
+}
+
 $now = new DateTimeImmutable();
 
 $phoneRaw = (string) ($_REQUEST['phone'] ?? '');
@@ -94,6 +135,16 @@ if (($_GET['format'] ?? '') === 'json') {
         'phone'      => $phone,
         'whatsapp'   => $waSent,
     ]);
+    exit;
+}
+
+// Customer's copy left the thermal printer, so the kiosk doesn't need
+// to dwell on the on-screen confirmation — go straight back to the
+// idle screen for the next car. Only happens on a clean print; a
+// printer error falls through to the visible page with a Reprint
+// button so the operator can recover.
+if ($printer->isEnabled() && !empty($printRes['ok'])) {
+    header('Location: entrance.php?ready=1');
     exit;
 }
 ?><!doctype html>
@@ -297,7 +348,7 @@ if (($_GET['format'] ?? '') === 'json') {
     <div class="note"><?= htmlspecialchars(I18n::t('entrance_note')) ?></div>
     <?php if ($waSent): ?><div class="wa"><?= htmlspecialchars(I18n::t('entrance_whatsapp', ['phone' => $phone])) ?></div><?php endif; ?>
     <div class="noprint">
-      <button onclick="location.href='entrance.php'"><?= htmlspecialchars(I18n::t('entrance_new')) ?></button>
+      <button onclick="location.href='entrance.php?ready=1'"><?= htmlspecialchars(I18n::t('entrance_new')) ?></button>
       <?php if ($printer->isEnabled() && !$printRes['ok']): ?>
         <button onclick="window.print()" style="margin-left:8px"><?= htmlspecialchars(I18n::t('entrance_reprint')) ?></button>
       <?php endif; ?>
