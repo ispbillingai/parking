@@ -82,7 +82,7 @@ $csrf = Auth::csrfToken();
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="id" value="<?= (int) ($editing['id'] ?? 0) ?>">
       <label><?= htmlspecialchars(I18n::t('plan_code')) ?>
-        <input name="code" required value="<?= htmlspecialchars($editing['code'] ?? '') ?>" placeholder="MONTH_BASIC">
+        <input name="code" required value="<?= htmlspecialchars($editing['code'] ?? '') ?>" placeholder="<?= htmlspecialchars(I18n::t('ph_plan_code')) ?>">
       </label>
       <label><?= htmlspecialchars(I18n::t('plan_name')) ?>
         <input name="name" required value="<?= htmlspecialchars($editing['name'] ?? '') ?>" placeholder="<?= htmlspecialchars(I18n::t('plan_name_ph')) ?>">

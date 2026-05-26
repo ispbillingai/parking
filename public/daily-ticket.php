@@ -135,7 +135,7 @@ button.danger{background:linear-gradient(135deg,#f87171,#ef4444);border:none;col
   <input id="phone" name="phone" placeholder="+39..." inputmode="tel" autocomplete="tel">
 
   <label class="label"><?= htmlspecialchars(I18n::t('totem_email')) ?></label>
-  <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email">
+  <input id="email" name="email" type="email" placeholder="<?= htmlspecialchars(I18n::t('ph_email_example')) ?>" autocomplete="email">
 
   <label class="label"><?= htmlspecialchars(I18n::t('totem_name_optional')) ?></label>
   <input id="name" name="name" placeholder="<?= htmlspecialchars(I18n::t('totem_name_ph')) ?>" autocomplete="name">

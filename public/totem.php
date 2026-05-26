@@ -259,7 +259,7 @@ button.go{
       </div>
       <div>
         <label><?= htmlspecialchars(I18n::t('totem_email')) ?></label>
-        <input name="email" type="email" placeholder="you@example.com" autocomplete="email">
+        <input name="email" type="email" placeholder="<?= htmlspecialchars(I18n::t('ph_email_example')) ?>" autocomplete="email">
       </div>
     </div>
 

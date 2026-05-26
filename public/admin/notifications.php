@@ -91,7 +91,7 @@ $csrf = Auth::csrfToken();
       <code class="k"><?= htmlspecialchars($c['event_key']) ?></code>
       <?php if (!$enabled): ?><span class="badge expired"><?= htmlspecialchars(I18n::t('notif_disabled')) ?></span><?php endif; ?>
     </h2>
-    <p class="muted" style="margin:0 0 14px;font-size:13px;line-height:1.55"><?= htmlspecialchars($c['description']) ?></p>
+    <p class="muted" style="margin:0 0 14px;font-size:13px;line-height:1.55"><?= htmlspecialchars(I18n::t($c['description_key'])) ?></p>
 
     <p style="margin:0 0 8px;font-size:12px;color:var(--muted);letter-spacing:.04em">
       <?= htmlspecialchars(I18n::t('notif_placeholders')) ?>:

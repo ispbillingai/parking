@@ -38,7 +38,7 @@ $groups = [
              'placeholder' => 'smtp.example.com', 'help_key' => 'settings_mail_smtp_help'],
             ['key' => 'mailer.smtp_port',  'type' => 'number', 'label_key' => 'settings_mail_smtp_port'],
             ['key' => 'mailer.smtp_secure','type' => 'select', 'label_key' => 'settings_mail_smtp_secure',
-             'options' => ['' => 'none', 'tls' => 'STARTTLS', 'ssl' => 'SSL/TLS']],
+             'options' => ['' => I18n::t('opt_none'), 'tls' => 'STARTTLS', 'ssl' => 'SSL/TLS']],
             ['key' => 'mailer.smtp_user',  'type' => 'text',     'label_key' => 'settings_mail_smtp_user'],
             ['key' => 'mailer.smtp_pass',  'type' => 'password', 'label_key' => 'settings_mail_smtp_pass'],
         ],

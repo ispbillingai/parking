@@ -49,22 +49,22 @@ final class Template
     {
         return [
             [
-                'channel'      => 'whatsapp',
-                'event_key'    => 'entrance_ticket',
-                'description'  => 'Sent on entry when the visitor provided a phone number (gate auto-print or totem).',
-                'placeholders' => ['brand', 'entry_time', 'pin', 'qr_url', 'customer_name', 'phone'],
+                'channel'         => 'whatsapp',
+                'event_key'       => 'entrance_ticket',
+                'description_key' => 'notif_desc_whatsapp_entrance_ticket',
+                'placeholders'    => ['brand', 'entry_time', 'pin', 'qr_url', 'customer_name', 'phone'],
             ],
             [
-                'channel'      => 'email',
-                'event_key'    => 'entrance_ticket',
-                'description'  => 'Sent by the totem when the visitor chose Email delivery. HTML allowed in the body.',
-                'placeholders' => ['brand', 'entry_time', 'pin', 'qr_url', 'customer_name', 'email'],
+                'channel'         => 'email',
+                'event_key'       => 'entrance_ticket',
+                'description_key' => 'notif_desc_email_entrance_ticket',
+                'placeholders'    => ['brand', 'entry_time', 'pin', 'qr_url', 'customer_name', 'email'],
             ],
             [
-                'channel'      => 'whatsapp',
-                'event_key'    => 'payment_paid',
-                'description'  => 'Sent after the cashier confirms a payment, telling the customer their PIN is now valid for exit.',
-                'placeholders' => ['brand', 'pin', 'ttl_minutes', 'amount', 'customer_name', 'phone'],
+                'channel'         => 'whatsapp',
+                'event_key'       => 'payment_paid',
+                'description_key' => 'notif_desc_whatsapp_payment_paid',
+                'placeholders'    => ['brand', 'pin', 'ttl_minutes', 'amount', 'customer_name', 'phone'],
             ],
         ];
     }

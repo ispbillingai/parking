@@ -54,7 +54,7 @@ Layout::begin(I18n::t('rev_subs_title'), 'revenue_subs');
     <select name="days" onchange="this.form.submit()">
       <option value="90"  <?= $periodDays === 90  ? 'selected' : '' ?>><?= htmlspecialchars(I18n::t('rev_period_90')) ?></option>
       <option value="365" <?= $periodDays === 365 ? 'selected' : '' ?>><?= htmlspecialchars(I18n::t('rev_period_365')) ?></option>
-      <option value="730" <?= $periodDays === 730 ? 'selected' : '' ?>>24m</option>
+      <option value="730" <?= $periodDays === 730 ? 'selected' : '' ?>><?= htmlspecialchars(I18n::t('rev_period_730')) ?></option>
     </select>
   </label>
 </form>

@@ -104,8 +104,8 @@ Layout::begin(I18n::t('cp_title'), 'carparks');
   <form method="post" class="crud">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <input type="hidden" name="action" value="create_park">
-    <label><?= htmlspecialchars(I18n::t('cp_code')) ?><input name="code" required placeholder="north_lot"></label>
-    <label><?= htmlspecialchars(I18n::t('cp_name')) ?><input name="name" required placeholder="North Lot"></label>
+    <label><?= htmlspecialchars(I18n::t('cp_code')) ?><input name="code" required placeholder="<?= htmlspecialchars(I18n::t('ph_park_code')) ?>"></label>
+    <label><?= htmlspecialchars(I18n::t('cp_name')) ?><input name="name" required placeholder="<?= htmlspecialchars(I18n::t('ph_park_name')) ?>"></label>
     <div class="full"><button class="btn primary" type="submit"><?= htmlspecialchars(I18n::t('btn_save')) ?></button></div>
   </form>
 </div>
@@ -164,8 +164,8 @@ Layout::begin(I18n::t('cp_title'), 'carparks');
       <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
       <input type="hidden" name="action" value="add_barrier">
       <input type="hidden" name="car_park_id" value="<?= (int) $p['id'] ?>">
-      <label><?= htmlspecialchars(I18n::t('cp_barrier_code')) ?><input name="code" required placeholder="entrance_b"></label>
-      <label><?= htmlspecialchars(I18n::t('cp_barrier_name')) ?><input name="name" required placeholder="Entrance B"></label>
+      <label><?= htmlspecialchars(I18n::t('cp_barrier_code')) ?><input name="code" required placeholder="<?= htmlspecialchars(I18n::t('ph_barrier_code')) ?>"></label>
+      <label><?= htmlspecialchars(I18n::t('cp_barrier_name')) ?><input name="name" required placeholder="<?= htmlspecialchars(I18n::t('ph_barrier_name')) ?>"></label>
       <label><?= htmlspecialchars(I18n::t('cp_barrier_dir')) ?>
         <select name="direction">
           <option value="entrance"><?= htmlspecialchars(I18n::t('cp_dir_entrance')) ?></option>
@@ -173,7 +173,7 @@ Layout::begin(I18n::t('cp_title'), 'carparks');
         </select>
       </label>
       <label class="full"><?= htmlspecialchars(I18n::t('cp_barrier_topic')) ?>
-        <input name="topic" placeholder="/parkingIN/relay47042/in/control">
+        <input name="topic" placeholder="<?= htmlspecialchars(I18n::t('ph_mqtt_topic')) ?>">
         <small style="color:var(--muted);font-size:12px;margin-top:4px"><?= htmlspecialchars(I18n::t('cp_barrier_topic_help')) ?></small>
       </label>
       <div class="full"><button class="btn primary" type="submit"><?= htmlspecialchars(I18n::t('btn_save')) ?></button></div>

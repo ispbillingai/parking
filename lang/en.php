@@ -454,6 +454,21 @@ return [
     'flash_template_reset'     => 'Template reset to default.',
     'flash_template_invalid'   => 'Unknown template channel/event.',
     'flash_template_body_required' => 'Template body cannot be empty.',
+    'notif_desc_whatsapp_entrance_ticket' => 'Sent on entry when the visitor provided a phone number (gate auto-print or totem).',
+    'notif_desc_email_entrance_ticket'    => 'Sent by the totem when the visitor chose Email delivery. HTML allowed in the body.',
+    'notif_desc_whatsapp_payment_paid'    => 'Sent after the cashier confirms a payment, telling the customer their PIN is now valid for exit.',
+
+    // Generic placeholders used across forms
+    'ph_email_example'   => 'you@example.com',
+    'ph_phone_example'   => '+39...',
+    'ph_park_code'       => 'e.g. north_lot',
+    'ph_park_name'       => 'e.g. North Lot',
+    'ph_barrier_code'    => 'e.g. entrance_b',
+    'ph_barrier_name'    => 'e.g. Entrance B',
+    'ph_full_name'       => 'e.g. Mario Rossi',
+    'ph_mqtt_topic'      => 'e.g. /parkingIN/relay47042/in/control',
+    'ph_plan_code'       => 'e.g. MONTH_BASIC',
+    'opt_none'           => 'None',
 
     // Barriers control page
     'bar_title'          => 'Gate barriers',
@@ -499,6 +514,7 @@ return [
     'rev_period_30'      => 'Last 30 days',
     'rev_period_90'      => 'Last 90 days',
     'rev_period_365'     => 'Last 12 months',
+    'rev_period_730'     => 'Last 24 months',
     'rev_period'         => 'Period',
     'rev_grand_total'    => 'Grand total',
 
@@ -552,4 +568,5 @@ return [
     'flash_user_added'       => 'User added.',
     'flash_user_deleted'     => 'User deleted.',
     'flash_user_self_delete' => 'You cannot delete the account you are signed in with.',
+    'usr_you'                => 'you',
 ];

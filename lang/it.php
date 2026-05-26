@@ -452,6 +452,21 @@ return [
     'flash_template_reset'     => 'Template ripristinato.',
     'flash_template_invalid'   => 'Canale/evento template non valido.',
     'flash_template_body_required' => 'Il corpo del template non può essere vuoto.',
+    'notif_desc_whatsapp_entrance_ticket' => 'Inviato all\'ingresso quando il visitatore ha fornito un numero di telefono (stampa automatica al cancello o totem).',
+    'notif_desc_email_entrance_ticket'    => 'Inviato dal totem quando il visitatore sceglie l\'invio via email. È consentito HTML nel corpo.',
+    'notif_desc_whatsapp_payment_paid'    => 'Inviato dopo la conferma del pagamento alla cassa, comunicando al cliente che il PIN è valido per l\'uscita.',
+
+    // Placeholder generici dei moduli
+    'ph_email_example'   => 'tu@esempio.com',
+    'ph_phone_example'   => '+39...',
+    'ph_park_code'       => 'es. parcheggio_nord',
+    'ph_park_name'       => 'es. Parcheggio Nord',
+    'ph_barrier_code'    => 'es. ingresso_b',
+    'ph_barrier_name'    => 'es. Ingresso B',
+    'ph_full_name'       => 'es. Mario Rossi',
+    'ph_mqtt_topic'      => 'es. /parkingIN/relay47042/in/control',
+    'ph_plan_code'       => 'es. MENSILE_BASE',
+    'opt_none'           => 'Nessuna',
 
     // Pagina controllo barriere
     'bar_title'          => 'Barriere del parcheggio',
@@ -497,6 +512,7 @@ return [
     'rev_period_30'      => 'Ultimi 30 giorni',
     'rev_period_90'      => 'Ultimi 90 giorni',
     'rev_period_365'     => 'Ultimi 12 mesi',
+    'rev_period_730'     => 'Ultimi 24 mesi',
     'rev_period'         => 'Periodo',
     'rev_grand_total'    => 'Totale complessivo',
 
@@ -550,4 +566,5 @@ return [
     'flash_user_added'       => 'Utente aggiunto.',
     'flash_user_deleted'     => 'Utente eliminato.',
     'flash_user_self_delete' => 'Non puoi eliminare l\'account con cui sei connesso.',
+    'usr_you'                => 'tu',
 ];

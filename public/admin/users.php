@@ -83,9 +83,9 @@ Layout::begin(I18n::t('usr_title'), 'users');
   <form method="post" class="crud" autocomplete="off">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <input type="hidden" name="action" value="add">
-    <label><?= htmlspecialchars(I18n::t('usr_email')) ?><input name="email" type="email" required placeholder="you@example.com"></label>
+    <label><?= htmlspecialchars(I18n::t('usr_email')) ?><input name="email" type="email" required placeholder="<?= htmlspecialchars(I18n::t('ph_email_example')) ?>"></label>
     <label><?= htmlspecialchars(I18n::t('usr_password')) ?><input name="password" type="password" required minlength="6"></label>
-    <label><?= htmlspecialchars(I18n::t('usr_full_name')) ?><input name="full_name" placeholder="Mario Rossi"></label>
+    <label><?= htmlspecialchars(I18n::t('usr_full_name')) ?><input name="full_name" placeholder="<?= htmlspecialchars(I18n::t('ph_full_name')) ?>"></label>
     <label><?= htmlspecialchars(I18n::t('usr_role')) ?>
       <select name="role">
         <option value="admin"><?= htmlspecialchars(I18n::t('usr_role_admin')) ?></option>
@@ -108,7 +108,7 @@ Layout::begin(I18n::t('usr_title'), 'users');
     <tbody>
       <?php foreach ($users as $u): ?>
         <tr>
-          <td><?= htmlspecialchars($u['username']) ?><?= ((int) $u['id'] === $meId) ? ' <span class="badge active">you</span>' : '' ?></td>
+          <td><?= htmlspecialchars($u['username']) ?><?= ((int) $u['id'] === $meId) ? ' <span class="badge active">' . htmlspecialchars(I18n::t('usr_you')) . '</span>' : '' ?></td>
           <td><?= htmlspecialchars((string) ($u['full_name'] ?? '')) ?></td>
           <td><?= htmlspecialchars(I18n::t('usr_role_' . $u['role'])) ?></td>
           <td><?= $u['last_login_at']
