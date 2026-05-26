@@ -75,7 +75,7 @@ Layout::begin(I18n::t('nav_sessions'), 'sessions');
       <select name="status">
         <option value=""><?= htmlspecialchars(I18n::t('filter_all')) ?></option>
         <?php foreach ($validStatus as $s): ?>
-          <option value="<?= $s ?>" <?= $status === $s ? 'selected' : '' ?>><?= $s ?></option>
+          <option value="<?= $s ?>" <?= $status === $s ? 'selected' : '' ?>><?= htmlspecialchars(I18n::t('session_status_' . $s)) ?></option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -83,7 +83,7 @@ Layout::begin(I18n::t('nav_sessions'), 'sessions');
       <select name="channel">
         <option value=""><?= htmlspecialchars(I18n::t('filter_all')) ?></option>
         <?php foreach ($validChan as $c): ?>
-          <option value="<?= $c ?>" <?= $channel === $c ? 'selected' : '' ?>><?= $c ?></option>
+          <option value="<?= $c ?>" <?= $channel === $c ? 'selected' : '' ?>><?= htmlspecialchars(I18n::t('entry_channel_' . $c)) ?></option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -126,11 +126,11 @@ Layout::begin(I18n::t('nav_sessions'), 'sessions');
                 <span class="muted">—</span>
               <?php endif; ?>
             </td>
-            <td><span class="badge exited"><?= htmlspecialchars($r['entry_channel']) ?></span></td>
+            <td><span class="badge exited"><?= htmlspecialchars(I18n::t('entry_channel_' . $r['entry_channel'])) ?></span></td>
             <td><?= htmlspecialchars((new DateTime($r['entered_at']))->format('d/m/Y H:i')) ?></td>
             <td><?= $r['paid_at']   ? htmlspecialchars((new DateTime($r['paid_at']))->format('d/m H:i'))   : '<span class="muted">—</span>' ?></td>
             <td><?= $r['exited_at'] ? htmlspecialchars((new DateTime($r['exited_at']))->format('d/m H:i')) : '<span class="muted">—</span>' ?></td>
-            <td><span class="badge <?= htmlspecialchars($r['status']) ?>"><?= htmlspecialchars($r['status']) ?></span></td>
+            <td><span class="badge <?= htmlspecialchars($r['status']) ?>"><?= htmlspecialchars(I18n::t('session_status_' . $r['status'])) ?></span></td>
             <td class="num"><?= htmlspecialchars($money(isset($r['amount_cents']) ? (int) $r['amount_cents'] : null)) ?></td>
           </tr>
         <?php endforeach; ?>

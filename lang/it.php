@@ -182,6 +182,16 @@ return [
     'col_customer'     => 'Cliente',
     'col_channel'      => 'Canale',
 
+    // Stati sessione e canali di ingresso (badge e filtri della pagina Sessioni)
+    'session_status_active'    => 'Attiva',
+    'session_status_paid'      => 'Pagata',
+    'session_status_exited'    => 'Uscita',
+    'session_status_expired'   => 'Scaduta',
+    'session_status_cancelled' => 'Annullata',
+    'entry_channel_gate'       => 'Cancello',
+    'entry_channel_totem'      => 'Totem',
+    'entry_channel_api'        => 'API',
+
     // Etichette tipo evento (gate_events.event_type)
     'event_entry'                => 'Ingresso',
     'event_scan_at_pay'          => 'Scansione alla cassa',

@@ -184,6 +184,16 @@ return [
     'col_channel'      => 'Channel',
 
     // Filters / paging
+    // Parking session statuses and entry channels (used on Sessions page badges/filters)
+    'session_status_active'    => 'Active',
+    'session_status_paid'      => 'Paid',
+    'session_status_exited'    => 'Exited',
+    'session_status_expired'   => 'Expired',
+    'session_status_cancelled' => 'Cancelled',
+    'entry_channel_gate'       => 'Gate',
+    'entry_channel_totem'      => 'Totem',
+    'entry_channel_api'        => 'API',
+
     // Event type labels (gate_events.event_type)
     'event_entry'                => 'Entry',
     'event_scan_at_pay'          => 'Scan at cashier',

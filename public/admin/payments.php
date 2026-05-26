@@ -128,7 +128,7 @@ $csrf = Auth::csrfToken();
             <td class="num"><?= htmlspecialchars($money((int) $r['amount_cents'])) ?></td>
             <td>
               <?php if ($isPaid): ?>
-                <span class="badge paid"><?= htmlspecialchars(I18n::t('payments_paid')) ?> · <?= htmlspecialchars($r['method'] ?? '') ?></span>
+                <span class="badge paid"><?= htmlspecialchars(I18n::t('payments_paid')) ?> · <?= htmlspecialchars($r['method'] ? I18n::t('method_' . $r['method']) : '') ?></span>
                 <div class="muted" style="font-size:11px"><?= htmlspecialchars((new DateTime($r['paid_at']))->format('d/m/Y H:i')) ?></div>
               <?php elseif ($isOverdue): ?>
                 <span class="badge expired"><?= htmlspecialchars(I18n::t('payments_overdue')) ?></span>

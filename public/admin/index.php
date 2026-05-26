@@ -76,7 +76,7 @@ Layout::begin(I18n::t('nav_dashboard'), 'dashboard');
             <td>#<?= (int) $r['id'] ?></td>
             <td><code class="k"><?= htmlspecialchars($r['pin']) ?></code></td>
             <td><?= htmlspecialchars((new DateTime($r['entered_at']))->format('d/m H:i')) ?></td>
-            <td><span class="badge <?= htmlspecialchars($r['status']) ?>"><?= htmlspecialchars($r['status']) ?></span></td>
+            <td><span class="badge <?= htmlspecialchars($r['status']) ?>"><?= htmlspecialchars(I18n::t('session_status_' . $r['status'])) ?></span></td>
             <td class="num"><?= $r['amount_cents'] !== null ? htmlspecialchars($money((int) $r['amount_cents'])) : '<span class="muted">—</span>' ?></td>
           </tr>
         <?php endforeach; ?>
