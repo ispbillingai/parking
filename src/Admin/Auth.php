@@ -5,6 +5,7 @@ namespace Parking\Admin;
 
 use PDO;
 use Parking\Db;
+use Parking\I18n;
 
 /**
  * Tiny session-cookie auth for the admin dashboard. No external libraries.
@@ -118,12 +119,12 @@ final class Auth
     {
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
             http_response_code(405);
-            echo 'Method not allowed';
+            echo I18n::t('err_method_not_allowed');
             exit;
         }
         if (!self::csrfCheck($_POST['_csrf'] ?? null)) {
             http_response_code(403);
-            echo 'Bad CSRF token';
+            echo I18n::t('err_bad_csrf');
             exit;
         }
     }

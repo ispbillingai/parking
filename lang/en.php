@@ -70,6 +70,8 @@ return [
     'pay_new_transaction' => 'New transaction',
 
     'err_invalid_pin'     => 'Invalid PIN',
+    'err_method_not_allowed' => 'Method not allowed',
+    'err_bad_csrf'           => 'Bad CSRF token',
     'err_session_missing' => 'Session not found',
     'err_already_paid'    => 'This ticket has already been paid.',
     'err_login_cashmatic' => 'Cashmatic login: ',
