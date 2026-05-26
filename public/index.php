@@ -109,7 +109,7 @@ $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
     <h1><?= htmlspecialchars(I18n::t('index_title')) ?></h1>
     <p class="sub"><?= htmlspecialchars(I18n::t('index_subtitle')) ?></p>
     <div class="grid">
-      <a class="tile" href="entrance.php?ready=1">
+      <a class="tile" href="entrance.php">
         <span class="ico">&#x1F39F;</span>
         <span class="meta"><?= htmlspecialchars(I18n::t('tile_print_hourly_title')) ?><small><?= htmlspecialchars(I18n::t('tile_print_hourly_sub')) ?></small></span>
       </a>
