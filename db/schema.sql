@@ -179,20 +179,42 @@ CREATE TABLE IF NOT EXISTS gate_events (
         REFERENCES subscriptions(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Physical gate barriers controlled from the admin panel. One row per
--- barrier; `status` is kept fresh by bin/mqtt-listener.php, which watches
--- the relay PCB's input1 topic (HIGH = open, LOW = closed).
-CREATE TABLE IF NOT EXISTS barriers (
-    code VARCHAR(20) NOT NULL PRIMARY KEY,        -- 'entrance' | 'exit'
-    name VARCHAR(60) NOT NULL,
-    status ENUM('open','closed','unknown') NOT NULL DEFAULT 'unknown',
-    status_at DATETIME NULL,                      -- when status last changed
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- A car park groups one or more entrance and exit barriers; a site with
+-- multiple lanes simply attaches more barriers to the same car park.
+CREATE TABLE IF NOT EXISTS car_parks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(40) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    notes VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_car_park_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO barriers (code, name) VALUES
-    ('entrance', 'Entrance barrier'),
-    ('exit',     'Exit barrier')
+INSERT INTO car_parks (code, name) VALUES ('default', 'Default car park')
+    ON DUPLICATE KEY UPDATE code = code;
+
+-- Physical gate barriers controlled from the admin panel. One row per
+-- barrier; `status` is kept fresh by bin/mqtt-listener.php, which watches
+-- the relay PCB's input1 topic (HIGH = open, LOW = closed). The
+-- mqtt_control_topic column lets each barrier override the default topic
+-- from config/config.php, so a single broker can drive multiple cards.
+CREATE TABLE IF NOT EXISTS barriers (
+    code VARCHAR(20) NOT NULL PRIMARY KEY,
+    car_park_id INT UNSIGNED NULL,
+    name VARCHAR(60) NOT NULL,
+    direction ENUM('entrance','exit') NOT NULL DEFAULT 'entrance',
+    mqtt_control_topic VARCHAR(200) NULL,
+    status ENUM('open','closed','unknown') NOT NULL DEFAULT 'unknown',
+    status_at DATETIME NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_barrier_park (car_park_id),
+    CONSTRAINT fk_barrier_park FOREIGN KEY (car_park_id) REFERENCES car_parks(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO barriers (code, car_park_id, name, direction) VALUES
+    ('entrance', (SELECT id FROM car_parks WHERE code = 'default'), 'Entrance barrier', 'entrance'),
+    ('exit',     (SELECT id FROM car_parks WHERE code = 'default'), 'Exit barrier',     'exit')
 ON DUPLICATE KEY UPDATE code = code;
 
 -- Wiegand tags seen at a gate reader that do NOT match any subscription

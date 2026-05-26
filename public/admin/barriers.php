@@ -26,16 +26,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     try {
         if ($action === 'open') {
             $barrier = (string) ($_POST['barrier'] ?? '');
-            if (!in_array($barrier, ['entrance', 'exit'], true)) {
+            $st = $pdo->prepare('SELECT * FROM barriers WHERE code = ? LIMIT 1');
+            $st->execute([$barrier]);
+            $row = $st->fetch();
+            if (!$row) {
                 Layout::flash(I18n::t('flash_barrier_unknown'), 'err');
             } else {
-                $name = I18n::t('bar_name_' . $barrier);
-
-                $mqtt->openBarrier($barrier);
+                $direction = (string) ($row['direction'] ?? $barrier);
+                $name = (string) $row['name'];
+                $mqtt->openBarrier($direction, $row['mqtt_control_topic'] ?? null);
                 Db::logEvent($pdo, null, null, 'barrier', [
-                    'action'  => 'open',
-                    'barrier' => $barrier,
-                    'user'    => $user,
+                    'action'      => 'open',
+                    'barrier'     => $barrier,
+                    'direction'   => $direction,
+                    'car_park_id' => (int) ($row['car_park_id'] ?? 0),
+                    'user'        => $user,
                 ]);
                 Layout::flash(I18n::t('flash_barrier_opened', ['name' => $name]));
             }
@@ -76,7 +81,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 // --- Read current state ------------------------------------------------------
 
-$barriers = $pdo->query('SELECT * FROM barriers ORDER BY code')->fetchAll();
+$barriers = $pdo->query(
+    "SELECT b.*, cp.name AS car_park_name, cp.code AS car_park_code
+     FROM barriers b
+     LEFT JOIN car_parks cp ON cp.id = b.car_park_id
+     ORDER BY COALESCE(cp.name, ''), b.direction, b.code"
+)->fetchAll();
+
+$barriersByPark = [];
+foreach ($barriers as $b) {
+    $key = (string) ($b['car_park_name'] ?? '—');
+    $barriersByPark[$key][] = $b;
+}
 
 $stored      = Settings::all($pdo);
 $trafficFull = ($stored['gate.traffic_light'] ?? 'free') === 'full';
@@ -172,15 +188,17 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
 
 <p class="muted" style="margin:-4px 0 18px;max-width:760px"><?= htmlspecialchars(I18n::t('bar_intro')) ?></p>
 
-<div class="grid k2">
-  <?php foreach ($barriers as $b):
-      $st   = (string) $b['status'];
-      $code = (string) $b['code'];
-      // Prefer a translated name; fall back to the DB name for any
-      // barrier code without a bar_name_* string.
-      $name = I18n::t('bar_name_' . $code);
-      if ($name === 'bar_name_' . $code) $name = (string) $b['name'];
-  ?>
+<?php foreach ($barriersByPark as $parkName => $list): ?>
+  <h2 style="margin:8px 0 10px"><?= htmlspecialchars($parkName) ?></h2>
+  <div class="grid k2">
+    <?php foreach ($list as $b):
+        $st   = (string) $b['status'];
+        $code = (string) $b['code'];
+        // Prefer a translated name; fall back to the DB name for any
+        // barrier code without a bar_name_* string.
+        $name = I18n::t('bar_name_' . $code);
+        if ($name === 'bar_name_' . $code) $name = (string) $b['name'];
+    ?>
   <div class="card barrier-card">
     <div class="barrier-head">
       <h2><?= htmlspecialchars($name) ?></h2>
@@ -222,8 +240,9 @@ Layout::begin(I18n::t('bar_title'), 'barriers');
       </button>
     </form>
   </div>
-  <?php endforeach; ?>
-</div>
+    <?php endforeach; ?>
+  </div>
+<?php endforeach; ?>
 
 <div class="grid k2" style="margin-top:4px">
   <!-- Free / Full traffic light -->

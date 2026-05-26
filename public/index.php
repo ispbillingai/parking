@@ -111,11 +111,19 @@ $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
     <div class="grid">
       <a class="tile" href="entrance.php">
         <span class="ico">&#x1F39F;</span>
-        <span class="meta"><?= htmlspecialchars(I18n::t('tile_entrance_title')) ?><small><?= htmlspecialchars(I18n::t('tile_entrance_sub')) ?></small></span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_print_hourly_title')) ?><small><?= htmlspecialchars(I18n::t('tile_print_hourly_sub')) ?></small></span>
+      </a>
+      <a class="tile" href="daily-ticket.php?print=1">
+        <span class="ico">&#x1F4C5;</span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_print_daily_title')) ?><small><?= htmlspecialchars(I18n::t('tile_print_daily_sub')) ?></small></span>
       </a>
       <a class="tile" href="totem.php">
         <span class="ico">&#x1F5A8;</span>
-        <span class="meta"><?= htmlspecialchars(I18n::t('tile_totem_title')) ?><small><?= htmlspecialchars(I18n::t('tile_totem_sub')) ?></small></span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_recv_hourly_title')) ?><small><?= htmlspecialchars(I18n::t('tile_recv_hourly_sub')) ?></small></span>
+      </a>
+      <a class="tile" href="daily-ticket.php">
+        <span class="ico">&#x1F4F2;</span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_recv_daily_title')) ?><small><?= htmlspecialchars(I18n::t('tile_recv_daily_sub')) ?></small></span>
       </a>
       <a class="tile" href="subscriber-entry.php">
         <span class="ico">&#x1F511;</span>
@@ -125,8 +133,12 @@ $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
         <span class="ico">&#x1F4B6;</span>
         <span class="meta"><?= htmlspecialchars(I18n::t('tile_cashier_title')) ?><small><?= htmlspecialchars(I18n::t('tile_cashier_sub')) ?></small></span>
       </a>
-      <a class="tile" href="pay.php">
+      <a class="tile" href="pos-pay.php">
         <span class="ico">&#x1F4B3;</span>
+        <span class="meta"><?= htmlspecialchars(I18n::t('tile_pos_title')) ?><small><?= htmlspecialchars(I18n::t('tile_pos_sub')) ?></small></span>
+      </a>
+      <a class="tile" href="pay.php">
+        <span class="ico">&#x2705;</span>
         <span class="meta"><?= htmlspecialchars(I18n::t('tile_pay_title')) ?><small><?= htmlspecialchars(I18n::t('tile_pay_sub')) ?></small></span>
       </a>
       <a class="tile" href="admin/index.php">

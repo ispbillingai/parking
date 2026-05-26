@@ -22,6 +22,9 @@ final class Layout
         'tags'          => ['tags.php',          'nav_tags',          '&#x1FAAA;'],
         'plans'         => ['plans.php',         'nav_plans',         '&#x1F3F7;'],
         'payments'      => ['payments.php',      'nav_payments',      '&#x1F4B6;'],
+        'revenue_daily' => ['revenue-daily.php', 'nav_revenue_daily', '&#x1F4B0;'],
+        'revenue_subs'  => ['revenue-subs.php',  'nav_revenue_subs',  '&#x1F4B5;'],
+        'carparks'      => ['carparks.php',      'nav_carparks',      '&#x1F17F;&#xFE0F;'],
         'notifications' => ['notifications.php', 'nav_notifications', '&#x1F4E8;'],
         'settings'      => ['settings.php',      'nav_settings',      '&#x2699;&#xFE0F;'],
     ];

@@ -17,7 +17,7 @@ use Throwable;
  * Shared between the Cashmatic (cash) finish endpoint and the card-pay
  * endpoint so both payment paths produce the same artefacts:
  *   - customer row (find-or-create by email/phone)
- *   - subscriptions row with expires_at = now + 24h
+ *   - subscriptions row with expires_at = now + 18h
  *   - paid subscription_payments row (so admin revenue reports are correct)
  *   - daily_ticket_sold event
  *   - MQTT pin_add so the gate-side cache learns the new key
@@ -52,7 +52,11 @@ final class DailyTicket
         $now     = new DateTimeImmutable();
         $today   = $now->format('Y-m-d');
         $nowStr  = $now->format('Y-m-d H:i:s');
-        $expires = $now->modify('+24 hours')->format('Y-m-d H:i:s');
+        $expires = $now->modify('+18 hours')->format('Y-m-d H:i:s');
+
+        // Sweep stale daily tickets that expired without ever being used,
+        // so the admin reports don't accumulate ghost subscriptions.
+        self::sweepUnusedExpired($pdo);
 
         $pdo->beginTransaction();
         try {
@@ -127,6 +131,7 @@ final class DailyTicket
         return [
             'ok'              => true,
             'subscription_id' => $subId,
+            'expires_in_hours'=> 18,
             'customer_id'     => $customerId,
             'pin'             => $pin,
             'qr_url'          => $qrUrl,
@@ -134,5 +139,33 @@ final class DailyTicket
             'expires_human'   => (new DateTimeImmutable($expires))->format('d/m/Y H:i'),
             'delivered'       => $delivered,
         ];
+    }
+
+    /**
+     * Delete daily-ticket subscriptions whose expires_at has passed and
+     * whose key was never used at the gate. "Used" means a
+     * subscription_entry event has been recorded for that subscription.
+     *
+     * Returns the number of subscriptions removed.
+     */
+    public static function sweepUnusedExpired(PDO $pdo): int
+    {
+        $sql = "SELECT s.id FROM subscriptions s
+                JOIN subscription_plans p ON p.id = s.plan_id
+                WHERE p.period = 'daily'
+                  AND s.expires_at IS NOT NULL
+                  AND s.expires_at < NOW()
+                  AND NOT EXISTS (
+                      SELECT 1 FROM gate_events e
+                      WHERE e.subscription_id = s.id
+                        AND e.event_type = 'subscription_entry'
+                  )";
+        $ids = $pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN);
+        if (!$ids) return 0;
+
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $pdo->prepare("DELETE FROM subscription_payments WHERE subscription_id IN ($in)")->execute($ids);
+        $pdo->prepare("DELETE FROM subscriptions WHERE id IN ($in)")->execute($ids);
+        return count($ids);
     }
 }

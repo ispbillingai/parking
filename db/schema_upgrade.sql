@@ -172,18 +172,37 @@ INSERT INTO subscription_plans (code, name, period, price_cents, active)
 SELECT 'DAY_PASS', 'Daily ticket (24h)', 'daily', 500, 1
 WHERE NOT EXISTS (SELECT 1 FROM subscription_plans WHERE period = 'daily');
 
+-- A car park groups one or more entrance / exit barriers.
+CREATE TABLE IF NOT EXISTS car_parks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(40) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    notes VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_car_park_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO car_parks (code, name) VALUES ('default', 'Default car park')
+    ON DUPLICATE KEY UPDATE code = code;
+
 -- Gate barriers controlled from the admin panel.
 CREATE TABLE IF NOT EXISTS barriers (
     code VARCHAR(20) NOT NULL PRIMARY KEY,
+    car_park_id INT UNSIGNED NULL,
     name VARCHAR(60) NOT NULL,
+    direction ENUM('entrance','exit') NOT NULL DEFAULT 'entrance',
+    mqtt_control_topic VARCHAR(200) NULL,
     status ENUM('open','closed','unknown') NOT NULL DEFAULT 'unknown',
     status_at DATETIME NULL,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_barrier_park (car_park_id),
+    CONSTRAINT fk_barrier_park FOREIGN KEY (car_park_id) REFERENCES car_parks(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO barriers (code, name) VALUES
-    ('entrance', 'Entrance barrier'),
-    ('exit',     'Exit barrier')
+INSERT INTO barriers (code, car_park_id, name, direction) VALUES
+    ('entrance', (SELECT id FROM car_parks WHERE code = 'default'), 'Entrance barrier', 'entrance'),
+    ('exit',     (SELECT id FROM car_parks WHERE code = 'default'), 'Exit barrier',     'exit')
 ON DUPLICATE KEY UPDATE code = code;
 
 -- Wiegand tags seen at a gate reader with no matching subscription.

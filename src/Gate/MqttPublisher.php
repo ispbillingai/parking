@@ -43,12 +43,16 @@ class MqttPublisher
     }
 
     /**
-     * Open one of the two physical barriers. $which is 'entrance' or 'exit';
-     * each barrier's control topic is configured under mqtt.topics.
+     * Open a physical barrier. $direction is 'entrance' or 'exit'; the
+     * default topic (config mqtt.topics.entrance_control/exit_control)
+     * is used unless $overrideTopic is provided, which lets a car park
+     * with multiple lanes target a specific barrier's relay card.
      */
-    public function openBarrier(string $which): void
+    public function openBarrier(string $direction, ?string $overrideTopic = null): void
     {
-        $topic = $this->controlTopic($which === 'exit' ? 'exit_control' : 'entrance_control');
+        $topic = ($overrideTopic !== null && $overrideTopic !== '')
+            ? $overrideTopic
+            : $this->controlTopic($direction === 'exit' ? 'exit_control' : 'entrance_control');
         $this->publish($topic, self::PAYLOAD_OPEN, 'barrier');
     }
 

@@ -179,7 +179,22 @@ $pdo->exec(
 ) NOT NULL");
 step('   widened event_type ENUM');
 
-step('-- creating barriers table');
+step('-- creating barriers + car_parks tables');
+
+$pdo->exec(
+"CREATE TABLE IF NOT EXISTS car_parks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(40) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    notes VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_car_park_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$pdo->exec(
+"INSERT INTO car_parks (code, name) VALUES ('default', 'Default car park')
+ ON DUPLICATE KEY UPDATE code = code");
 
 $pdo->exec(
 "CREATE TABLE IF NOT EXISTS barriers (
@@ -196,6 +211,28 @@ $pdo->exec(
     ('exit',     'Exit barrier')
  ON DUPLICATE KEY UPDATE code = code");
 step('   seeded entrance + exit barriers');
+
+// Extend barriers for multi-entrance/multi-exit per car park.
+$defaultParkId = (int) $pdo->query("SELECT id FROM car_parks WHERE code = 'default' LIMIT 1")->fetchColumn();
+if (!colExists($pdo, 'barriers', 'car_park_id')) {
+    $pdo->exec("ALTER TABLE barriers ADD COLUMN car_park_id INT UNSIGNED NULL AFTER code");
+    $pdo->exec("UPDATE barriers SET car_park_id = $defaultParkId WHERE car_park_id IS NULL");
+    $pdo->exec("ALTER TABLE barriers ADD KEY idx_barrier_park (car_park_id)");
+    if (!fkExists($pdo, 'barriers', 'fk_barrier_park')) {
+        $pdo->exec("ALTER TABLE barriers ADD CONSTRAINT fk_barrier_park FOREIGN KEY (car_park_id) REFERENCES car_parks(id) ON DELETE RESTRICT");
+    }
+    step('   added barriers.car_park_id');
+}
+if (!colExists($pdo, 'barriers', 'direction')) {
+    $pdo->exec("ALTER TABLE barriers ADD COLUMN direction ENUM('entrance','exit') NOT NULL DEFAULT 'entrance' AFTER name");
+    $pdo->exec("UPDATE barriers SET direction = 'entrance' WHERE code = 'entrance'");
+    $pdo->exec("UPDATE barriers SET direction = 'exit'     WHERE code = 'exit'");
+    step('   added barriers.direction');
+}
+if (!colExists($pdo, 'barriers', 'mqtt_control_topic')) {
+    $pdo->exec("ALTER TABLE barriers ADD COLUMN mqtt_control_topic VARCHAR(200) NULL AFTER direction");
+    step('   added barriers.mqtt_control_topic');
+}
 
 step('-- creating unregistered_tags table');
 
