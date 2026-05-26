@@ -507,6 +507,14 @@ return [
     'bar_action_open'          => 'Open barrier',
     'bar_action_traffic_light' => 'Traffic light',
     'bar_action_entrance_lock' => 'Entrance lock',
+    // Humanised detail sentences for the Recent barrier activity table
+    'bar_detail_open'             => 'Barrier {barrier} ({direction}) opened by {user}',
+    'bar_detail_traffic_free'     => 'Traffic light set to FREE (green) by {user}',
+    'bar_detail_traffic_full'     => 'Traffic light set to FULL (red) by {user}',
+    'bar_detail_lock_locked'      => 'Entrance barrier locked by {user}',
+    'bar_detail_lock_unlocked'    => 'Entrance barrier unlocked by {user}',
+    'bar_dir_entrance'            => 'entrance',
+    'bar_dir_exit'                => 'exit',
 
     // Daily revenue page
     'rev_daily_title'    => 'Daily ticket revenue',

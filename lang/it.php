@@ -505,6 +505,14 @@ return [
     'bar_action_open'          => 'Apertura barriera',
     'bar_action_traffic_light' => 'Semaforo',
     'bar_action_entrance_lock' => 'Blocco ingresso',
+    // Dettagli in linguaggio naturale per la tabella Attività recente
+    'bar_detail_open'             => 'Barriera {barrier} ({direction}) aperta da {user}',
+    'bar_detail_traffic_free'     => 'Semaforo impostato su LIBERO (verde) da {user}',
+    'bar_detail_traffic_full'     => 'Semaforo impostato su COMPLETO (rosso) da {user}',
+    'bar_detail_lock_locked'      => 'Barriera di ingresso bloccata da {user}',
+    'bar_detail_lock_unlocked'    => 'Barriera di ingresso sbloccata da {user}',
+    'bar_dir_entrance'            => 'entrata',
+    'bar_dir_exit'                => 'uscita',
 
     // Incassi giornalieri
     'rev_daily_title'    => 'Incassi biglietti giornalieri',
