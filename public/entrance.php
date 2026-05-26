@@ -260,7 +260,7 @@ if (($_GET['format'] ?? '') === 'json') {
 </style>
 </head>
 <body>
-  <nav class="lang-switch" aria-label="Language">
+  <nav class="lang-switch" aria-label="<?= htmlspecialchars(I18n::t('a11y_language')) ?>">
     <?php foreach (I18n::labels() as $label => $code): ?>
       <a href="<?= htmlspecialchars($currentUrl . '?lang=' . $code) ?>" class="<?= $code === $lang ? 'active' : '' ?>"><?= htmlspecialchars($label) ?></a>
     <?php endforeach; ?>
@@ -290,7 +290,7 @@ if (($_GET['format'] ?? '') === 'json') {
       </div>
     </div>
     <div class="sep"></div>
-    <div class="qr-wrap"><img src="<?= htmlspecialchars($qrUrl) ?>" alt="QR code"></div>
+    <div class="qr-wrap"><img src="<?= htmlspecialchars($qrUrl) ?>" alt="<?= htmlspecialchars(I18n::t('a11y_qr_code')) ?>"></div>
     <div class="pin-label"><?= htmlspecialchars(I18n::t('entrance_pin')) ?></div>
     <div class="pin"><?= htmlspecialchars($pin) ?></div>
     <div class="sep"></div>

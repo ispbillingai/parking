@@ -469,6 +469,8 @@ return [
     'ph_mqtt_topic'      => 'e.g. /parkingIN/relay47042/in/control',
     'ph_plan_code'       => 'e.g. MONTH_BASIC',
     'opt_none'           => 'None',
+    'a11y_language'      => 'Language',
+    'a11y_qr_code'       => 'QR code',
 
     // Barriers control page
     'bar_title'          => 'Gate barriers',

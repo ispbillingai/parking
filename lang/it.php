@@ -467,6 +467,8 @@ return [
     'ph_mqtt_topic'      => 'es. /parkingIN/relay47042/in/control',
     'ph_plan_code'       => 'es. MENSILE_BASE',
     'opt_none'           => 'Nessuna',
+    'a11y_language'      => 'Lingua',
+    'a11y_qr_code'       => 'Codice QR',
 
     // Pagina controllo barriere
     'bar_title'          => 'Barriere del parcheggio',

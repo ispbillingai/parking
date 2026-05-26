@@ -180,7 +180,7 @@ $browserCfg = [
   <div class="header">
     <h1><?= htmlspecialchars(I18n::t('pay_title')) ?></h1>
     <div class="header-right">
-      <nav class="lang-switch" aria-label="Language">
+      <nav class="lang-switch" aria-label="<?= htmlspecialchars(I18n::t('a11y_language')) ?>">
         <?php foreach (I18n::labels() as $label => $code): ?>
           <a href="<?= htmlspecialchars($currentUrl . '?lang=' . $code) ?>" class="<?= $code === $lang ? 'active' : '' ?>"><?= htmlspecialchars($label) ?></a>
         <?php endforeach; ?>

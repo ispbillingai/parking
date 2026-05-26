@@ -124,7 +124,7 @@ button{
 </style>
 </head>
 <body>
-<nav class="lang-switch" aria-label="Language">
+<nav class="lang-switch" aria-label="<?= htmlspecialchars(I18n::t('a11y_language')) ?>">
   <?php foreach (I18n::labels() as $label => $code): ?>
     <a href="<?= htmlspecialchars($currentUrl . '?lang=' . $code) ?>" class="<?= $code === $lang ? 'active' : '' ?>"><?= htmlspecialchars($label) ?></a>
   <?php endforeach; ?>
