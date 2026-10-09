@@ -180,6 +180,35 @@ final class Client
     }
 
     /**
+     * Admin "Test connection": ask the RT for its status (queryPrinterStatus).
+     * Prints nothing and opens no receipt.
+     *
+     * @return array{ok:bool, state?:string, error?:string}
+     */
+    public function status(): array
+    {
+        if (!$this->enabled()) {
+            return ['ok' => false, 'error' => 'fiscal_printer_disabled'];
+        }
+        $operator = htmlspecialchars((string) ($this->cfg['operator'] ?? '1'), ENT_XML1);
+        $res = $this->request(
+            '<printerCommand><queryPrinterStatus operator="' . $operator . '" statusType="1" /></printerCommand>',
+            ['timeout' => 10000]
+        );
+        if (!$res['ok']) {
+            return ['ok' => false, 'error' => $res['error'] ?? 'unreachable'];
+        }
+        $add   = $res['add_info'] ?? [];
+        $parts = [];
+        foreach (['serialNumber', 'fpStatus', 'cpuRel', 'mfRel', 'mfStatus'] as $k) {
+            if (isset($add[$k]) && is_scalar($add[$k]) && (string) $add[$k] !== '') {
+                $parts[] = $k . ' ' . $add[$k];
+            }
+        }
+        return ['ok' => true, 'state' => implode(' · ', $parts) ?: (string) ($res['status'] ?? 'ok')];
+    }
+
+    /**
      * POST a raw fiscal-ePOS-Print XML body to fpmate.cgi.
      *
      * @return array{ok:bool, error?:string, code?:string, status?:string, add_info?:array<string,string>}

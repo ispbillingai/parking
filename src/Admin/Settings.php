@@ -109,8 +109,10 @@ final class Settings
             'app.subscription_block_overdue',
             'pos.connect_timeout', 'pos.read_timeout',
             'dojo.read_timeout', 'dojo.poll_interval_ms',
+            'printer.port', 'printer.timeout', 'printer.width', 'printer.codepage',
+            'fiscal_printer.timeout_ms',
         ];
-        $boolKeys = ['dojo.verify_ssl'];
+        $boolKeys = ['dojo.verify_ssl', 'cashmatic.verify_ssl', 'fiscal_printer.verify_ssl'];
         if (in_array($name, $boolKeys, true)) {
             return $value === '1';
         }

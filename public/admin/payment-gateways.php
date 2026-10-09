@@ -11,10 +11,11 @@ declare(strict_types=1);
  * are overlaid on config/config.php by Settings::overlay(); a blank field
  * falls back to the config.php value.
  *
- * Cash (Cashmatic) is a separate payment type and is not affected here.
+ * The Cashmatic cash machine's connection (cashmatic.*) is edited here too;
+ * the cash button does not depend on the card gateway choice.
  *
- * The Dojo secret key is WRITE-ONLY: it is never rendered back. Leave the
- * field blank to keep the stored key; type a new key to replace it.
+ * The Dojo secret key and the Cashmatic password are WRITE-ONLY: never
+ * rendered back. Leave the field blank to keep the stored value.
  */
 
 require __DIR__ . '/_init.php';
@@ -57,6 +58,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         'dojo.read_timeout'      => (string) (int) ($_POST['d_read'] ?? 20),
         'dojo.poll_interval_ms'  => (string) (int) ($_POST['d_poll'] ?? 1500),
         'dojo.verify_ssl'        => isset($_POST['d_verify']) ? '1' : '0',
+        // Cashmatic (cash machine): the password is write-only like the Dojo secret.
+        'cashmatic.base_url'     => Gateway::posNormUrl((string) ($_POST['cm_url'] ?? ''), 'rts'),
+        'cashmatic.username'     => trim((string) ($_POST['cm_username'] ?? '')),
+        'cashmatic.password'     => (string) ($_POST['cm_password'] ?? '') !== '' ? (string) $_POST['cm_password'] : '__keep__',
+        'cashmatic.verify_ssl'   => isset($_POST['cm_verify']) ? '1' : '0',
     ]);
 
     // Never log the secret key.
@@ -70,6 +76,8 @@ $active    = Gateway::active($cfg);
 $pos        = $cfg['pos']  ?? [];
 $dojo       = $cfg['dojo'] ?? [];
 $dojoKeySet = !empty($dojo['secret_key']);
+$cm         = $cfg['cashmatic'] ?? [];
+$cmPwSet    = !empty($cm['password']);
 $posP17     = Gateway::posMode($pos) === 'p17';
 
 $v   = static fn($val, $d = '') => htmlspecialchars((string) ($val ?? $d), ENT_QUOTES, 'UTF-8');
@@ -196,6 +204,34 @@ $csrf = Auth::csrfToken();
       <div style="margin-top:14px">
         <button type="button" class="btn" onclick="testGw('dojo', this)"><?= $t('gw_test') ?></button>
         <span class="test-result" data-for="dojo"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cashmatic (cash machine) -->
+  <div class="card">
+    <h2 class="gw-head" onclick="toggleGw('cashmatic')">
+      <span><?= $t('gw_cashmatic') ?>
+        <?php $on = !empty($cm['base_url']); ?>
+        <span class="gw-tag <?= $on ? 'gw-on' : 'gw-off' ?>"><?= $t($on ? 'gw_tag_active' : 'gw_tag_inactive') ?></span></span>
+      <span>&#x25BE;</span>
+    </h2>
+    <div class="gw-body" id="gw-cashmatic">
+      <p class="muted" style="margin:0 0 14px;font-size:12px"><?= $t('gw_cashmatic_help') ?></p>
+      <div class="grid k2">
+        <label class="gw-field"><span class="<?= $lbl ?>"><?= $t('gw_ip_or_url') ?></span>
+          <input type="text" name="cm_url" style="<?= $inp ?>" value="<?= $v($cm['base_url'] ?? '') ?>" placeholder="https://100.x.y.z:50301"></label>
+        <label class="gw-field"><span class="<?= $lbl ?>"><?= $t('gw_cm_username') ?></span>
+          <input type="text" name="cm_username" style="<?= $inp ?>" value="<?= $v($cm['username'] ?? '') ?>" autocomplete="off"></label>
+        <label class="gw-field"><span class="<?= $lbl ?>"><?= $t('gw_cm_password') ?></span>
+          <input type="password" name="cm_password" style="<?= $inp ?>" autocomplete="new-password"
+                 placeholder="<?= $cmPwSet ? $t('gw_cm_password_set') : '' ?>"></label>
+        <label style="display:flex;align-items:center;gap:10px;align-self:end">
+          <input type="checkbox" name="cm_verify" value="1" <?= !empty($cm['verify_ssl']) ? 'checked' : '' ?>> <?= $t('gw_verify_ssl') ?></label>
+      </div>
+      <div style="margin-top:14px">
+        <button type="button" class="btn" onclick="testGw('cashmatic', this)"><?= $t('gw_test') ?></button>
+        <span class="test-result" data-for="cashmatic"></span>
       </div>
     </div>
   </div>

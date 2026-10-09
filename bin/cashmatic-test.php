@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 $cfg = require __DIR__ . '/../config/config.php';
+// Same values the app uses: config.php overlaid with the admin settings.
+$cfg = \Parking\Admin\Settings::overlay($cfg, \Parking\Db::pdo($cfg['db']));
 
 use Parking\Cashmatic\Client;
 

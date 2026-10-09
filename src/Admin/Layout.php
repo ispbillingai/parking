@@ -28,6 +28,8 @@ final class Layout
         'users'         => ['users.php',         'nav_users',         '&#x1F464;'],
         'notifications' => ['notifications.php', 'nav_notifications', '&#x1F4E8;'],
         'gateways'      => ['payment-gateways.php', 'nav_gateways',   '&#x1F4B3;'],
+        'printers'      => ['printers.php',      'nav_printers',      '&#x1F5A8;&#xFE0F;'],
+        'fiscal_printers' => ['fiscal-printers.php', 'nav_fiscal_printers', '&#x1F9FE;'],
         'settings'      => ['settings.php',      'nav_settings',      '&#x2699;&#xFE0F;'],
     ];
 

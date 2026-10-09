@@ -65,6 +65,43 @@ final class Thermal
         return ['ok' => true, 'bytes' => $written];
     }
 
+    /**
+     * Admin "Test" button: print a short test slip with the given lines.
+     *
+     * @param string[] $lines
+     * @return array{ok:bool, error?:string, bytes?:int}
+     */
+    public function printTest(string $title, array $lines): array
+    {
+        if (!$this->isEnabled()) {
+            return ['ok' => false, 'error' => 'printer not configured'];
+        }
+        $errno = 0; $errstr = '';
+        $timeout = (int) ($this->cfg['timeout'] ?? 5);
+        $fp = @fsockopen((string) $this->cfg['host'], (int) ($this->cfg['port'] ?? 9100), $errno, $errstr, $timeout);
+        if (!$fp) {
+            return ['ok' => false, 'error' => trim("$errno $errstr") ?: 'connect failed'];
+        }
+        stream_set_timeout($fp, $timeout);
+
+        $w    = (int) ($this->cfg['width'] ?? 32);
+        $out  = self::ESC . '@' . self::ESC . 't' . chr((int) ($this->cfg['codepage'] ?? 2));
+        $out .= self::ESC . 'a' . "\x01" . self::ESC . '!' . "\x30" . $this->enc($title) . self::LF;
+        $out .= self::ESC . '!' . "\x00" . str_repeat('-', $w) . self::LF;
+        $out .= self::ESC . 'a' . "\x00";
+        foreach ($lines as $l) {
+            $out .= $this->enc((string) $l) . self::LF;
+        }
+        $out .= str_repeat('-', $w) . self::LF . str_repeat(self::LF, 4) . self::GS . 'V' . "\x01";
+
+        $written = @fwrite($fp, $out);
+        @fclose($fp);
+        if ($written === false || $written < strlen($out)) {
+            return ['ok' => false, 'error' => 'short write'];
+        }
+        return ['ok' => true, 'bytes' => $written];
+    }
+
     private function buildEntrance(array $t): string
     {
         $w        = (int) ($this->cfg['width'] ?? 32);
