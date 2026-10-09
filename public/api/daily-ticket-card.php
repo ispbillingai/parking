@@ -10,7 +10,7 @@ use Parking\Fiscal\Client as FiscalClient;
 use Parking\Fiscal\Log as FiscalLog;
 use Parking\Notify\Mailer;
 use Parking\Pin\Generator;
-use Parking\Pos\Client as PosClient;
+use Parking\Pos\Gateway;
 use Parking\Subscription\DailyTicket;
 
 $pdo = Db::pdo($cfg['db']);
@@ -24,13 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$pos    = new PosClient($cfg['pos'] ?? []);
+// Ingenico over RTS (http://) or Protocol 17 straight to the terminal (tcp://).
+$pos    = Gateway::posClient($cfg['pos'] ?? []);
 $fiscal = new FiscalClient($cfg['fiscal_printer'] ?? []);
 
-if (!$pos->enabled()) {
+if (!Gateway::posOn($cfg) || !$pos->enabled()) {
     FiscalLog::error('pos_disabled', [
         'endpoint' => 'daily-ticket-card',
-        'note'     => 'endpoint refused — card flow needs a configured POS at pos.host/pos.port',
+        'gateway'  => Gateway::active($cfg),
+        'note'     => 'endpoint refused — Ingenico not active or no terminal address (Admin > Payment gateways)',
     ]);
     echo json_encode(['ok' => false, 'error' => 'pos_not_configured']);
     exit;

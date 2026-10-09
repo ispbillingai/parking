@@ -7,6 +7,7 @@ $cfg = require __DIR__ . '/../config/config.php';
 use Parking\Admin\Settings;
 use Parking\Db;
 use Parking\I18n;
+use Parking\Pos\Gateway;
 
 $pdo  = Db::pdo($cfg['db']);
 $cfg  = Settings::overlay($cfg, $pdo);
@@ -24,6 +25,7 @@ $currencySymbol = (string) ($cfg['tariff']['currency_symbol'] ?? '€');
 $browserCfg = [
     'currency_symbol'    => $currencySymbol,
     'auto_reset_seconds' => (int) ($cfg['app']['cashier_auto_reset_seconds'] ?? 8),
+    'gw'                 => Gateway::kioskCfg($cfg),
     'i18n' => [
         'phone_required'  => I18n::t('totem_err_phone_required'),
         'email_required'  => I18n::t('totem_err_email_required'),
@@ -144,7 +146,8 @@ button.danger{background:linear-gradient(135deg,#f87171,#ef4444);border:none;col
 
   <div class="actions">
     <button id="buy" class="primary"><?= htmlspecialchars(I18n::t('daily_buy_cash')) ?></button>
-    <button id="buyCard" class="primary"><?= htmlspecialchars(I18n::t('daily_buy_card')) ?></button>
+    <?php if ($browserCfg['gw']['card']): ?><button id="buyCard" class="primary"><?= htmlspecialchars(I18n::t('daily_buy_card')) ?></button><?php endif; ?>
+    <?php if ($browserCfg['gw']['dojo']): ?><button id="buyDojo" class="primary"><?= htmlspecialchars(I18n::t('pay_by_dojo')) ?></button><?php endif; ?>
   </div>
 </div>
 
@@ -174,6 +177,7 @@ button.danger{background:linear-gradient(135deg,#f87171,#ef4444);border:none;col
 <?php endif; ?>
 </div>
 
+<script src="js/dojo-pay.js"></script>
 <script>
 const CFG = <?= json_encode($browserCfg, JSON_UNESCAPED_SLASHES) ?>;
 let pollHandle = null, finishing = false, autoResetHandle = null;
@@ -217,6 +221,7 @@ function collect() {
 function setBuyDisabled(b) {
   if ($('buy'))     $('buy').disabled = b;
   if ($('buyCard')) $('buyCard').disabled = b;
+  if ($('buyDojo')) $('buyDojo').disabled = b;
 }
 function renderSuccess(r) {
   $('qrImg').src = r.qr_url;
@@ -256,7 +261,7 @@ if ($('buy')) {
     }
   };
 
-  $('buyCard').onclick = async () => {
+  if ($('buyCard')) $('buyCard').onclick = async () => {
     clearErr();
     const fields = collect(); if (!fields) return;
     setBuyDisabled(true);
@@ -272,6 +277,25 @@ if ($('buy')) {
       showErr(e.message);
       setBuyDisabled(false);
     }
+  };
+
+  // Dojo terminal (Dojo Cloud API) — overlay, live prompt, cancel, signature: js/dojo-pay.js
+  if ($('buyDojo')) $('buyDojo').onclick = () => {
+    clearErr();
+    const fields = collect(); if (!fields) return;
+    setBuyDisabled(true);
+    DojoPay.run({
+      body: Object.assign({ kind: 'daily' }, fields),
+      pollMs: CFG.gw.dojo_poll_ms,
+      i18n: CFG.gw.dojo_i18n,
+      amountText: '',
+      formatAmount: c => CFG.currency_symbol + ' ' + fmt(c),
+      onDone: r => renderSuccess(r),
+      onFail: msg => {
+        showErr(CFG.gw.dojo_i18n.pay_by_dojo + ': ' + (msg || CFG.i18n.payment_failed));
+        setBuyDisabled(false);
+      },
+    });
   };
 
   $('cancel').onclick = async () => {

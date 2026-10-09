@@ -4,7 +4,13 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 $cfg = require __DIR__ . '/../config/config.php';
 
+use Parking\Admin\Settings;
+use Parking\Db;
 use Parking\I18n;
+use Parking\Pos\Gateway;
+
+// Overlay admin settings so the card buttons follow Admin > Payment gateways.
+$cfg = Settings::overlay($cfg, Db::pdo($cfg['db']));
 
 $lang = I18n::init($cfg['app']['default_lang'] ?? null);
 $currentUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
@@ -15,6 +21,7 @@ $browserCfg = [
     'ttl_minutes'        => (int) ($cfg['app']['pin_ttl_after_pay_minutes'] ?? 15),
     'currency_symbol'    => $currencySymbol,
     'auto_reset_seconds' => (int) ($cfg['app']['cashier_auto_reset_seconds'] ?? 8),
+    'gw'                 => Gateway::kioskCfg($cfg),
     'i18n' => [
         'invalid_pin'     => I18n::t('err_invalid_pin'),
         'session_missing' => I18n::t('err_session_missing'),
@@ -214,7 +221,8 @@ $browserCfg = [
   <div class="amount"><span class="cur"><?= htmlspecialchars($currencySymbol) ?></span><span id="amount"></span></div>
   <div class="actions">
     <button id="pay" class="primary"><?= htmlspecialchars(I18n::t('pay_start')) ?></button>
-    <button id="payCard" class="primary"><?= htmlspecialchars(I18n::t('pay_by_card')) ?></button>
+    <?php if ($browserCfg['gw']['card']): ?><button id="payCard" class="primary"><?= htmlspecialchars(I18n::t('pay_by_card')) ?></button><?php endif; ?>
+    <?php if ($browserCfg['gw']['dojo']): ?><button id="payDojo" class="primary"><?= htmlspecialchars(I18n::t('pay_by_dojo')) ?></button><?php endif; ?>
     <button id="back"><?= htmlspecialchars(I18n::t('pay_abort')) ?></button>
   </div>
   <p class="err" id="e2" style="margin-top:10px"></p>
@@ -248,6 +256,7 @@ $browserCfg = [
 </div>
 </div>
 
+<script src="js/dojo-pay.js"></script>
 <script>
 const CFG = <?= json_encode($browserCfg, JSON_UNESCAPED_SLASHES) ?>;
 let session = null, pollHandle = null, autoResetHandle = null, finishing = false;
@@ -373,7 +382,7 @@ $('pay').onclick = async () => {
   }
 };
 
-$('payCard').onclick = async () => {
+if ($('payCard')) $('payCard').onclick = async () => {
   $('e2').textContent = '';
   $('payCard').disabled = true;
   $('pay').disabled = true;
@@ -397,6 +406,30 @@ $('payCard').onclick = async () => {
     $('pay').disabled = false;
     $('back').disabled = false;
   }
+};
+
+// Dojo terminal (Dojo Cloud API) — overlay, live prompt, cancel, signature: js/dojo-pay.js
+if ($('payDojo')) $('payDojo').onclick = () => {
+  $('e2').textContent = '';
+  const btns = ['pay', 'payCard', 'payDojo', 'back'].map($).filter(Boolean);
+  btns.forEach(b => b.disabled = true);
+  DojoPay.run({
+    body: { kind: 'session', pin: session.pin, amount_cents: session.amount_cents },
+    pollMs: CFG.gw.dojo_poll_ms,
+    i18n: CFG.gw.dojo_i18n,
+    amountText: money(session.amount_cents),
+    formatAmount: money,
+    onDone: r => {
+      btns.forEach(b => b.disabled = false);
+      renderSuccess(r.amount_cents || session.amount_cents, 0);
+      show('s4');
+      startAutoReset(CFG.auto_reset_seconds);
+    },
+    onFail: msg => {
+      btns.forEach(b => b.disabled = false);
+      $('e2').textContent = CFG.gw.dojo_i18n.pay_by_dojo + ': ' + (msg || CFG.i18n.payment_failed);
+    },
+  });
 };
 
 async function pollActive() {

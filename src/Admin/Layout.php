@@ -27,6 +27,7 @@ final class Layout
         'carparks'      => ['carparks.php',      'nav_carparks',      '&#x1F17F;&#xFE0F;'],
         'users'         => ['users.php',         'nav_users',         '&#x1F464;'],
         'notifications' => ['notifications.php', 'nav_notifications', '&#x1F4E8;'],
+        'gateways'      => ['payment-gateways.php', 'nav_gateways',   '&#x1F4B3;'],
         'settings'      => ['settings.php',      'nav_settings',      '&#x2699;&#xFE0F;'],
     ];
 

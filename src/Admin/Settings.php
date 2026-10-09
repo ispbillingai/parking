@@ -107,7 +107,13 @@ final class Settings
             'tariff.grace_minutes', 'mailer.smtp_port', 'mailer.smtp_timeout',
             'app.pin_ttl_after_pay_minutes', 'app.cashier_auto_reset_seconds',
             'app.subscription_block_overdue',
+            'pos.connect_timeout', 'pos.read_timeout',
+            'dojo.read_timeout', 'dojo.poll_interval_ms',
         ];
+        $boolKeys = ['dojo.verify_ssl'];
+        if (in_array($name, $boolKeys, true)) {
+            return $value === '1';
+        }
         return in_array($name, $intKeys, true) ? (int) $value : $value;
     }
 }

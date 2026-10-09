@@ -113,38 +113,58 @@ return [
         ],
     ],
 
-    // EFT-POS via RTS Web DoReMi POS 2.0 middleware
-    // (http://www.rtseng.it/) — a Windows service that wraps Italian
-    // "Protocollo 17" (ECR17) and exposes a simple HTTP API to the LAN.
+    // ---- Card gateways (same settings and rules as the Focacciami POS) ----
+    // Managed from Admin > Payment gateways: those values (settings table) win
+    // over the ones below; a blank field there falls back to this file.
+    // The page also picks the ACTIVE card gateway (payment.card_gateway):
+    // 'pos' (Ingenico), 'dojo', 'both' (default) or 'none'. A kiosk button
+    // only shows when its gateway is active AND configured.
     //
-    //   PHP on VPS ──HTTPS──► Tailscale ──HTTP──► RTS service on LAN PC
-    //                                              └─Protocollo 17──► Move/3500
-    //
-    // Setup steps on the LAN host:
-    //   1. Install RTS Web DoReMi POS 2.0 (WebDoremiposSetup.msi)
-    //   2. Edit C:\Program Files (x86)\Rtseng\WebDoremipos\WebDoremipos.exe.config
-    //      and add a <terminal> entry under <terminals>:
-    //        <terminal name="Ingenico-93740816" Mode="Tcp"
-    //                  TerminalAddress="192.164.1.26"
-    //                  TerminalPort="5040"
-    //                  Password="<RTS-activation-key>" />
-    //      (Without the activation password, RTS clamps every amount to 2
-    //      cents — fine for testing, not for production.)
-    //   3. Change BaseAddress to bind to the LAN IP, e.g.
-    //      http://192.164.1.21:80/WebDoremiposWS/ — and open Windows
-    //      Firewall TCP 80 inbound.
-    //   4. net stop WebDoremipos && net start WebDoremipos
-    //   5. Verify locally: http://127.0.0.1/WebDoremiposWS/api/Status
-    //      should return "Operative".
-    //
-    // base_url is what the VPS hits (via Tailscale-routed LAN IP).
-    // terminal_name matches the name= attribute in the RTS XML config.
+    // MONEY: amounts go to the terminals as integer CENTS.
+
+    // ---- Ingenico card terminal -----------------------------------------
+    // "Pay by card" button. Two connection modes, decided by base_url:
+    //   http://…/WebDoremiposWS  mode 'rts': RTS Web DoReMi POS 2.0 service on
+    //       a LAN PC wraps Protocol 17 to the terminal (http://www.rtseng.it/).
+    //       terminal_name = the <terminal name="…"> in WebDoremipos.exe.config
+    //       (without the RTS activation password every amount is clamped to
+    //       2 cents). Check: <base_url>/api/Status answers "Operative".
+    //   tcp://<terminal ip>:<port>  mode 'p17': no RTS PC, the server speaks
+    //       Protocol 17 straight to the terminal (ECR line set to TCP/IP).
+    //       terminal_name = terminal ID (8 digits, 00000000 = any),
+    //       ecr_id = till ID. If the line drops after the terminal accepted
+    //       the payment, the outcome is recovered with the G command.
+    // Leave base_url empty to hide the "Pay by card" button.
     'pos' => [
+        'mode'            => 'rts',     // 'rts' | 'p17' (base_url decides when it has a scheme)
         'base_url'        => 'http://192.164.1.21/WebDoremiposWS',
         'terminal_name'   => 'Ingenico-93740816',
-        'protocol_type'   => '0',     // '0'=auto / '1'=credit / '2'=debit
-        'connect_timeout' => 5,       // seconds — cURL connect
-        'read_timeout'    => 90,      // seconds — covers card-tap + acquirer auth
+        'ecr_id'          => '00000001', // p17 only
+        'protocol_type'   => '0',       // 0 auto / 1 credit / 2 debit
+        'connect_timeout' => 5,
+        'read_timeout'    => 90,        // covers card tap + acquirer auth
+    ],
+
+    // ---- Dojo card terminal (Dojo Cloud API "Pay at Counter") ------------
+    // "Pay by Dojo" button. Talks to Dojo's CLOUD API (api.dojo.tech), no
+    // local device. Get secret_key + terminal_id from the Dojo Developer
+    // Portal (NOT the dashboard login): sk_sandbox_ to test, sk_prod_ to go
+    // live. reseller_id / software_house_id are REQUIRED on terminal calls
+    // (sandbox: reseller1 / softwareHouse1; production values come from Dojo).
+    // The secret key is write-only in the admin page (blank = keep).
+    // Leave secret_key or terminal_id empty to hide the "Pay by Dojo" button.
+    'dojo' => [
+        'base_url'          => 'https://api.dojo.tech',
+        'secret_key'        => '',                 // sk_sandbox_… / sk_prod_…
+        'terminal_id'       => '',                 // Dojo terminalId (tm_…)
+        'version'           => '2026-02-27',       // Dojo API version header
+        'capture_mode'      => 'Auto',             // Auto = capture immediately
+        'reseller_id'       => '',                 // sandbox: reseller1
+        'software_house_id' => '',                 // sandbox: softwareHouse1
+        'connect_timeout'   => 5,
+        'read_timeout'      => 20,                 // per HTTP call; the tap itself is polled
+        'poll_interval_ms'  => 1500,
+        'verify_ssl'        => true,
     ],
 
     'app' => [
