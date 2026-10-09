@@ -124,6 +124,8 @@ body{
   width:240px;flex:0 0 240px;min-height:100vh;background:var(--side);
   border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:14px;
   position:sticky;top:0;
+  /* Long menu: scroll inside the sidebar instead of cutting the last items off. */
+  height:100vh;overflow-y:auto;box-sizing:border-box;
 }
 .logo{
   display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;
@@ -235,7 +237,7 @@ body.nav-open .side-overlay{display:block}
 @media (max-width:900px){
   body{display:block}
   .side{
-    position:fixed;top:0;left:0;height:100vh;width:280px;flex:none;
+    position:fixed;top:0;left:0;height:100vh;width:280px;flex:none;overflow-y:auto;
     transform:translateX(-100%);transition:transform .25s ease;z-index:50;
     box-shadow:6px 0 30px rgba(0,0,0,.55);
   }
